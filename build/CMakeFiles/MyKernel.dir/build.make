@@ -68,9 +68,9 @@ include CMakeFiles/MyKernel.dir/progress.make
 
 CMakeFiles/MyKernel: main.bin
 
-main.bin: /home/aladdin/Projects/OS/main.asm
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Assembling /home/aladdin/Projects/OS/main.asm to raw binary..."
-	nasm -f bin -o /home/aladdin/Projects/OS/build/main.bin /home/aladdin/Projects/OS/main.asm
+main.bin: /home/aladdin/Projects/OS/src/main.asm
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Assembling /home/aladdin/Projects/OS/src/main.asm to raw binary..."
+	nasm -f bin -o /home/aladdin/Projects/OS/build/main.bin /home/aladdin/Projects/OS/src/main.asm
 
 CMakeFiles/MyKernel.dir/codegen:
 .PHONY : CMakeFiles/MyKernel.dir/codegen

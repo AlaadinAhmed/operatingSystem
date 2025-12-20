@@ -10,25 +10,14 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/home/aladdin/Projects/OS/CMakeLists.txt"
   "CMakeFiles/4.1.2/CMakeASM_NASMCompiler.cmake"
   "CMakeFiles/4.1.2/CMakeSystem.cmake"
-  "/usr/share/cmake/Modules/CMakeASMCompiler.cmake.in"
   "/usr/share/cmake/Modules/CMakeASMInformation.cmake"
   "/usr/share/cmake/Modules/CMakeASM_NASMInformation.cmake"
-  "/usr/share/cmake/Modules/CMakeCompilerIdDetection.cmake"
-  "/usr/share/cmake/Modules/CMakeDetermineASMCompiler.cmake"
-  "/usr/share/cmake/Modules/CMakeDetermineASM_NASMCompiler.cmake"
-  "/usr/share/cmake/Modules/CMakeDetermineCompiler.cmake"
-  "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake"
-  "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake"
   "/usr/share/cmake/Modules/CMakeGenericSystem.cmake"
   "/usr/share/cmake/Modules/CMakeInitializeConfigs.cmake"
   "/usr/share/cmake/Modules/CMakeSystemSpecificInformation.cmake"
   "/usr/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake"
-  "/usr/share/cmake/Modules/CMakeTestASMCompiler.cmake"
-  "/usr/share/cmake/Modules/CMakeTestASM_NASMCompiler.cmake"
   "/usr/share/cmake/Modules/Internal/CMakeASMLinkerInformation.cmake"
   "/usr/share/cmake/Modules/Internal/CMakeASM_NASMLinkerInformation.cmake"
-  "/usr/share/cmake/Modules/Internal/CMakeInspectASMLinker.cmake"
-  "/usr/share/cmake/Modules/Internal/CMakeInspectASM_NASMLinker.cmake"
   "/usr/share/cmake/Modules/Platform/Linux-Initialize.cmake"
   "/usr/share/cmake/Modules/Platform/Linux.cmake"
   "/usr/share/cmake/Modules/Platform/UnixPaths.cmake"
@@ -42,8 +31,6 @@ set(CMAKE_MAKEFILE_OUTPUTS
 
 # Byproducts of CMake generate step:
 set(CMAKE_MAKEFILE_PRODUCTS
-  "CMakeFiles/4.1.2/CMakeASM_NASMCompiler.cmake"
-  "CMakeFiles/4.1.2/CMakeASM_NASMCompiler.cmake"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
