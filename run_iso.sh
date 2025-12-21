@@ -32,4 +32,4 @@ echo "ISO created at build/os.iso"
 
 # Run in QEMU
 echo "Running in QEMU..."
-qemu-system-x86_64 -cdrom build/os.iso
+qemu-system-x86_64 -cdrom build/os.iso -display curses
