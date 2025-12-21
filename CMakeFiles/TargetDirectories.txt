@@ -1,0 +1,4 @@
+/home/aladdin/Projects/OS/CMakeFiles/kernel.elf.dir
+/home/aladdin/Projects/OS/CMakeFiles/MyOS.dir
+/home/aladdin/Projects/OS/CMakeFiles/edit_cache.dir
+/home/aladdin/Projects/OS/CMakeFiles/rebuild_cache.dir

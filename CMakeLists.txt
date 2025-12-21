@@ -7,7 +7,9 @@ enable_language(CXX)
 
 # Compiler flags for 32-bit freestanding
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -ffreestanding -fno-pie -fno-stack-protector -g")
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/lib/lwext4/include )
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32 -ffreestanding -fno-pie -fno-stack-protector -g")
+add_definitions(-DCONFIG_EXT4_USE_XATTR=1 -DCONFIG_XATTR_ENABLE=1 -DCONFIG_META_CSUM_ENABLE=1)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Bootloader
 add_custom_command(
     OUTPUT boot.bin
@@ -25,10 +27,14 @@ add_custom_command(
 )
 
 # Kernel
+file(GLOB LWEXT4_SOURCES "src/external/lwext4/src/*.c")
+list(REMOVE_ITEM LWEXT4_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/external/lwext4/src/ext4_mkfs.c")
+add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/kernel/utils.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp src/drivers/font.cpp src/fs/lwext4_adapter.cpp ${LWEXT4_SOURCES} src/external/stb_truetype.h)
+target_link_libraries(kernel.elf gcc)
+target_include_directories(kernel.elf PRIVATE src/external/lwext4/include src/external)
+
+# Fallback without lwext4
 # add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp)
-# Uncomment the following line when lwext4 is added
-add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp src/fs/lwext4_adapter.cpp src/external/lwext4/src/*.c)
-target_include_directories(kernel.elf PRIVATE src/external/lwext4/include)
 target_include_directories(kernel.elf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_target_properties(kernel.elf PROPERTIES LINK_FLAGS "-m32 -nostdlib -T ${CMAKE_SOURCE_DIR}/linker.ld -no-pie -fno-pie")
 

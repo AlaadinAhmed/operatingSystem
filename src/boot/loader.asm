@@ -26,11 +26,37 @@ loader_entry:
     mov al, 'X'
     out dx, al
 
-    ; 1. Read Kernel (50 sectors from LBA 2048) to 0x8000
-    mov ax, 50
-    mov bx, KERNEL_LOCATION
-    mov ecx, 2048
+    ; 1. Read Kernel (300 sectors from LBA 2048) to 0x8000
+    ; We need to read in chunks to avoid 64KB segment overflow
+    ; 300 sectors = 150KB.
+    ; We'll read in 10 chunks of 30 sectors (15KB each).
+    
+    mov ax, 0
+    mov es, ax
+    mov bx, KERNEL_LOCATION ; 0x8000
+    mov ecx, 2048           ; Start LBA
+    mov dx, 40              ; Loop count (40 * 30 = 1200 sectors = 600KB)
+
+.kernel_load_loop:
+    push dx
+    mov ax, 30              ; Read 30 sectors
     call read_disk_lba
+    
+    add ecx, 30             ; Next LBA
+    
+    ; Advance Segment by 30 sectors * 512 bytes = 15360 bytes = 0x3C00
+    ; 0x3C00 / 16 = 0x3C0 paragraphs
+    mov dx, es
+    add dx, 0x3C0
+    mov es, dx
+    
+    pop dx
+    dec dx
+    jnz .kernel_load_loop
+
+    ; Restore ES to 0 for the rest of the loader
+    mov ax, 0
+    mov es, ax
 
     ; Debug: Kernel loaded
     mov dx, 0xe9
@@ -80,15 +106,20 @@ loader_entry:
     jne .find_mode_loop
 
     ; Check properties
+    ; ModeAttributes at offset 0. Bit 7 must be set (Linear Framebuffer).
+    mov ax, [VBE_MODE_INFO_ADDR]
+    and ax, 0x0080
+    jz .find_mode_loop
+
     ; Width at offset 18, Height at 20, BPP at 25
     mov ax, [VBE_MODE_INFO_ADDR + 18]
     cmp ax, 1920
     jne .find_mode_loop
-    
+
     mov ax, [VBE_MODE_INFO_ADDR + 20]
     cmp ax, 1080
     jne .find_mode_loop
-    
+
     mov al, [VBE_MODE_INFO_ADDR + 25]
     cmp al, 32
     jne .find_mode_loop
@@ -107,6 +138,10 @@ loader_entry:
     mov dx, 0xe9
     mov al, 'V'
     out dx, al
+
+    ; Enable A20 Line
+    mov ax, 0x2401
+    int 0x15
 
     ; Enter Protected Mode
     cli
@@ -139,40 +174,42 @@ no_extensions:
     jmp disk_error
 
 read_disk_lba:
-    mov [dap_sectors], ax
-    mov [dap_offset], bx
-    mov [dap_segment], ds
-    mov [dap_lba], ecx
-    mov [dap_lba+4], dword 0
-
+    ; Input:
+    ; AX = Sectors to read
+    ; BX = Buffer Offset (ES:BX)
+    ; ECX = Start LBA
+    
+    pusha
+    
+    ; Construct DAP on stack
+    push dword 0    ; LBA High
+    push ecx        ; LBA Low
+    push es         ; Segment
+    push bx         ; Offset
+    push ax         ; Count
+    push word 0x0010 ; Size=0x10, Reserved=0x00
+    
     mov ah, 0x42
     mov dl, [BOOT_DISK]
-    mov si, dap
+    mov si, sp      ; DS:SI -> DAP on stack
     int 0x13
     jc disk_error
+    
+    add sp, 16      ; Clean up stack
+    
+    popa
     ret
 
 disk_error:
     mov dx, 0xe9
-    mov al, 'E'
+    mov al, '2'
     out dx, al
     mov ah, 0x0e
-    mov al, 'E'
+    mov al, '2'
     int 0x10
     jmp $
 
 align 4
-dap:
-    db 0x10
-    db 0
-dap_sectors:
-    dw 0
-dap_offset:
-    dw 0
-dap_segment:
-    dw 0
-dap_lba:
-    dq 0
 
 BOOT_DISK: db 0
 
@@ -189,8 +226,18 @@ Start_Protected_Mode:
     mov ss, ax
     mov fs, ax
     mov gs, ax
-    mov ebp, 0x90000
+    mov ebp, 0x900000
     mov esp, ebp
+
+    ; Enable SSE
+    mov eax, cr0
+    and ax, 0xFFFB      ; Clear EM
+    or ax, 0x2          ; Set MP
+    mov cr0, eax
+    mov eax, cr4
+    or ax, 3 << 9       ; Set OSFXSR and OSXMMEXCPT
+    mov cr4, eax
+
     jmp KERNEL_LOCATION
 
 ; GDT

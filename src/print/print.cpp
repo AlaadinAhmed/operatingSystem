@@ -1,4 +1,5 @@
 #include "print/print.h"
+#include "drivers/vga.h"
 #include <cstddef>
 #include <stdarg.h>
 #include <stdint.h>
@@ -38,14 +39,7 @@ void write_serial(char a) {
 
 void putchar(char c) {
   write_serial(c);
-  char *video_memory = (char *)0xb8000;
-  if (c == '\n') {
-    offset += 160 - (offset % 160);
-    return;
-  }
-  video_memory[offset] = c;
-  video_memory[offset + 1] = 0x07;
-  offset += 2;
+  vga_console_putc(c);
 }
 
 void print(const char *str) {
@@ -80,6 +74,23 @@ void print_dec(int num) {
   }
 }
 
+void print_hex(unsigned int num) {
+  char hex[] = "0123456789ABCDEF";
+  char buffer[10];
+  int i = 0;
+  if (num == 0) {
+    putchar('0');
+    return;
+  }
+  while (num > 0) {
+    buffer[i++] = hex[num % 16];
+    num /= 16;
+  }
+  while (--i >= 0) {
+    putchar(buffer[i]);
+  }
+}
+
 void printf(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -92,6 +103,12 @@ void printf(const char *fmt, ...) {
       } else if (fmt[i] == 's') {
         const char *s = va_arg(args, const char *);
         print(s);
+      } else if (fmt[i] == 'c') {
+        int val = va_arg(args, int);
+        putchar((char)val);
+      } else if (fmt[i] == 'x') {
+        int val = va_arg(args, int);
+        print_hex(val);
       } else {
         putchar(fmt[i]);
       }
@@ -101,14 +118,48 @@ void printf(const char *fmt, ...) {
   }
   va_end(args);
 }
-bool strncmp(const char *s1, const char *s2, size_t n) {
-  for (size_t i = 0; i < n; i++) {
-    if (s1[i] != s2[i]) {
-      return false;
-    }
-    if (s1[i] == '\0') {
-      return true;
+
+void ksprintf(char *buffer, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  int buf_idx = 0;
+  for (int i = 0; fmt[i] != '\0'; i++) {
+    if (fmt[i] == '%') {
+      i++;
+      if (fmt[i] == 'd') {
+        int num = va_arg(args, int);
+        if (num == 0) {
+          buffer[buf_idx++] = '0';
+        } else {
+          if (num < 0) {
+            buffer[buf_idx++] = '-';
+            num = -num;
+          }
+          char temp[12];
+          int t_idx = 0;
+          while (num > 0) {
+            temp[t_idx++] = (num % 10) + '0';
+            num /= 10;
+          }
+          while (--t_idx >= 0) {
+            buffer[buf_idx++] = temp[t_idx];
+          }
+        }
+      } else if (fmt[i] == 's') {
+        const char *s = va_arg(args, const char *);
+        while (*s) {
+            buffer[buf_idx++] = *s++;
+        }
+      } else if (fmt[i] == 'c') {
+        int val = va_arg(args, int);
+        buffer[buf_idx++] = (char)val;
+      } else {
+        buffer[buf_idx++] = fmt[i];
+      }
+    } else {
+      buffer[buf_idx++] = fmt[i];
     }
   }
-  return true;
+  buffer[buf_idx] = '\0';
+  va_end(args);
 }

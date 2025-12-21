@@ -1,0 +1,6 @@
+# Hashes of file build rules.
+673cb6cbe92d720c8ad445c2b5f4a5a4 CMakeFiles/MyOS
+c16d6ed9ae8a008d7ad490e9da1bad3d boot.bin
+80795a34ec531f234c2f8edd472c2bb2 kernel.bin
+7c25dfe42b89e191ab1311ed33c874f0 loader.bin
+dd58f1eb408d833a3a69d522e73d5a97 os-image.bin

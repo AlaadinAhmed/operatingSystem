@@ -1,5 +1,5 @@
 #include "drivers/vga.h"
-#include "font.h"
+#include "drivers/font_data.h"
 
 // VBE Mode Info Block is at 0x5200
 #define VBE_MODE_INFO 0x5200
@@ -90,6 +90,24 @@ void vga_draw_char(int x, int y, char c, uint32_t color, int scale) {
   }
 }
 
+static int console_x = 0;
+static int console_y = 0;
+
+void vga_console_putc(char c) {
+    if (c == '\n') {
+        console_x = 0;
+        console_y += 16; // 8 * scale 2
+        return;
+    }
+    vga_draw_char(console_x, console_y, c, 0xFFFFFF, 2);
+    console_x += 16;
+    if (console_x >= get_width()) {
+        console_x = 0;
+        console_y += 16;
+    }
+    // TODO: Handle scrolling if console_y >= get_height()
+}
+
 void vga_draw_string(int x, int y, const char *str, uint32_t color, int scale) {
   int cursor_x = x;
   int cursor_y = y;
@@ -101,6 +119,6 @@ void vga_draw_string(int x, int y, const char *str, uint32_t color, int scale) {
       continue;
     }
     vga_draw_char(cursor_x, cursor_y, str[i], color, scale);
-    cursor_x += 8;
+    cursor_x += 8 * scale;
   }
 }

@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/aladdin/Projects/OS/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -174,6 +174,30 @@ src/disk/disk.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/disk/disk.cpp.s
 .PHONY : src/disk/disk.cpp.s
 
+src/drivers/font.o: src/drivers/font.cpp.o
+.PHONY : src/drivers/font.o
+
+# target to build an object file
+src/drivers/font.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/drivers/font.cpp.o
+.PHONY : src/drivers/font.cpp.o
+
+src/drivers/font.i: src/drivers/font.cpp.i
+.PHONY : src/drivers/font.i
+
+# target to preprocess a source file
+src/drivers/font.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/drivers/font.cpp.i
+.PHONY : src/drivers/font.cpp.i
+
+src/drivers/font.s: src/drivers/font.cpp.s
+.PHONY : src/drivers/font.s
+
+# target to generate assembly for a file
+src/drivers/font.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/drivers/font.cpp.s
+.PHONY : src/drivers/font.cpp.s
+
 src/drivers/vga.o: src/drivers/vga.cpp.o
 .PHONY : src/drivers/vga.o
 
@@ -198,6 +222,510 @@ src/drivers/vga.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/drivers/vga.cpp.s
 .PHONY : src/drivers/vga.cpp.s
 
+src/external/lwext4/src/ext4.o: src/external/lwext4/src/ext4.c.o
+.PHONY : src/external/lwext4/src/ext4.o
+
+# target to build an object file
+src/external/lwext4/src/ext4.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4.c.o
+.PHONY : src/external/lwext4/src/ext4.c.o
+
+src/external/lwext4/src/ext4.i: src/external/lwext4/src/ext4.c.i
+.PHONY : src/external/lwext4/src/ext4.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4.c.i
+.PHONY : src/external/lwext4/src/ext4.c.i
+
+src/external/lwext4/src/ext4.s: src/external/lwext4/src/ext4.c.s
+.PHONY : src/external/lwext4/src/ext4.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4.c.s
+.PHONY : src/external/lwext4/src/ext4.c.s
+
+src/external/lwext4/src/ext4_balloc.o: src/external/lwext4/src/ext4_balloc.c.o
+.PHONY : src/external/lwext4/src/ext4_balloc.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_balloc.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_balloc.c.o
+.PHONY : src/external/lwext4/src/ext4_balloc.c.o
+
+src/external/lwext4/src/ext4_balloc.i: src/external/lwext4/src/ext4_balloc.c.i
+.PHONY : src/external/lwext4/src/ext4_balloc.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_balloc.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_balloc.c.i
+.PHONY : src/external/lwext4/src/ext4_balloc.c.i
+
+src/external/lwext4/src/ext4_balloc.s: src/external/lwext4/src/ext4_balloc.c.s
+.PHONY : src/external/lwext4/src/ext4_balloc.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_balloc.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_balloc.c.s
+.PHONY : src/external/lwext4/src/ext4_balloc.c.s
+
+src/external/lwext4/src/ext4_bcache.o: src/external/lwext4/src/ext4_bcache.c.o
+.PHONY : src/external/lwext4/src/ext4_bcache.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_bcache.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_bcache.c.o
+.PHONY : src/external/lwext4/src/ext4_bcache.c.o
+
+src/external/lwext4/src/ext4_bcache.i: src/external/lwext4/src/ext4_bcache.c.i
+.PHONY : src/external/lwext4/src/ext4_bcache.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_bcache.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_bcache.c.i
+.PHONY : src/external/lwext4/src/ext4_bcache.c.i
+
+src/external/lwext4/src/ext4_bcache.s: src/external/lwext4/src/ext4_bcache.c.s
+.PHONY : src/external/lwext4/src/ext4_bcache.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_bcache.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_bcache.c.s
+.PHONY : src/external/lwext4/src/ext4_bcache.c.s
+
+src/external/lwext4/src/ext4_bitmap.o: src/external/lwext4/src/ext4_bitmap.c.o
+.PHONY : src/external/lwext4/src/ext4_bitmap.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_bitmap.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_bitmap.c.o
+.PHONY : src/external/lwext4/src/ext4_bitmap.c.o
+
+src/external/lwext4/src/ext4_bitmap.i: src/external/lwext4/src/ext4_bitmap.c.i
+.PHONY : src/external/lwext4/src/ext4_bitmap.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_bitmap.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_bitmap.c.i
+.PHONY : src/external/lwext4/src/ext4_bitmap.c.i
+
+src/external/lwext4/src/ext4_bitmap.s: src/external/lwext4/src/ext4_bitmap.c.s
+.PHONY : src/external/lwext4/src/ext4_bitmap.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_bitmap.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_bitmap.c.s
+.PHONY : src/external/lwext4/src/ext4_bitmap.c.s
+
+src/external/lwext4/src/ext4_block_group.o: src/external/lwext4/src/ext4_block_group.c.o
+.PHONY : src/external/lwext4/src/ext4_block_group.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_block_group.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_block_group.c.o
+.PHONY : src/external/lwext4/src/ext4_block_group.c.o
+
+src/external/lwext4/src/ext4_block_group.i: src/external/lwext4/src/ext4_block_group.c.i
+.PHONY : src/external/lwext4/src/ext4_block_group.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_block_group.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_block_group.c.i
+.PHONY : src/external/lwext4/src/ext4_block_group.c.i
+
+src/external/lwext4/src/ext4_block_group.s: src/external/lwext4/src/ext4_block_group.c.s
+.PHONY : src/external/lwext4/src/ext4_block_group.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_block_group.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_block_group.c.s
+.PHONY : src/external/lwext4/src/ext4_block_group.c.s
+
+src/external/lwext4/src/ext4_blockdev.o: src/external/lwext4/src/ext4_blockdev.c.o
+.PHONY : src/external/lwext4/src/ext4_blockdev.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_blockdev.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_blockdev.c.o
+.PHONY : src/external/lwext4/src/ext4_blockdev.c.o
+
+src/external/lwext4/src/ext4_blockdev.i: src/external/lwext4/src/ext4_blockdev.c.i
+.PHONY : src/external/lwext4/src/ext4_blockdev.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_blockdev.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_blockdev.c.i
+.PHONY : src/external/lwext4/src/ext4_blockdev.c.i
+
+src/external/lwext4/src/ext4_blockdev.s: src/external/lwext4/src/ext4_blockdev.c.s
+.PHONY : src/external/lwext4/src/ext4_blockdev.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_blockdev.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_blockdev.c.s
+.PHONY : src/external/lwext4/src/ext4_blockdev.c.s
+
+src/external/lwext4/src/ext4_crc32.o: src/external/lwext4/src/ext4_crc32.c.o
+.PHONY : src/external/lwext4/src/ext4_crc32.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_crc32.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_crc32.c.o
+.PHONY : src/external/lwext4/src/ext4_crc32.c.o
+
+src/external/lwext4/src/ext4_crc32.i: src/external/lwext4/src/ext4_crc32.c.i
+.PHONY : src/external/lwext4/src/ext4_crc32.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_crc32.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_crc32.c.i
+.PHONY : src/external/lwext4/src/ext4_crc32.c.i
+
+src/external/lwext4/src/ext4_crc32.s: src/external/lwext4/src/ext4_crc32.c.s
+.PHONY : src/external/lwext4/src/ext4_crc32.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_crc32.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_crc32.c.s
+.PHONY : src/external/lwext4/src/ext4_crc32.c.s
+
+src/external/lwext4/src/ext4_debug.o: src/external/lwext4/src/ext4_debug.c.o
+.PHONY : src/external/lwext4/src/ext4_debug.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_debug.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_debug.c.o
+.PHONY : src/external/lwext4/src/ext4_debug.c.o
+
+src/external/lwext4/src/ext4_debug.i: src/external/lwext4/src/ext4_debug.c.i
+.PHONY : src/external/lwext4/src/ext4_debug.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_debug.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_debug.c.i
+.PHONY : src/external/lwext4/src/ext4_debug.c.i
+
+src/external/lwext4/src/ext4_debug.s: src/external/lwext4/src/ext4_debug.c.s
+.PHONY : src/external/lwext4/src/ext4_debug.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_debug.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_debug.c.s
+.PHONY : src/external/lwext4/src/ext4_debug.c.s
+
+src/external/lwext4/src/ext4_dir.o: src/external/lwext4/src/ext4_dir.c.o
+.PHONY : src/external/lwext4/src/ext4_dir.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_dir.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_dir.c.o
+.PHONY : src/external/lwext4/src/ext4_dir.c.o
+
+src/external/lwext4/src/ext4_dir.i: src/external/lwext4/src/ext4_dir.c.i
+.PHONY : src/external/lwext4/src/ext4_dir.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_dir.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_dir.c.i
+.PHONY : src/external/lwext4/src/ext4_dir.c.i
+
+src/external/lwext4/src/ext4_dir.s: src/external/lwext4/src/ext4_dir.c.s
+.PHONY : src/external/lwext4/src/ext4_dir.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_dir.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_dir.c.s
+.PHONY : src/external/lwext4/src/ext4_dir.c.s
+
+src/external/lwext4/src/ext4_dir_idx.o: src/external/lwext4/src/ext4_dir_idx.c.o
+.PHONY : src/external/lwext4/src/ext4_dir_idx.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_dir_idx.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_dir_idx.c.o
+.PHONY : src/external/lwext4/src/ext4_dir_idx.c.o
+
+src/external/lwext4/src/ext4_dir_idx.i: src/external/lwext4/src/ext4_dir_idx.c.i
+.PHONY : src/external/lwext4/src/ext4_dir_idx.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_dir_idx.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_dir_idx.c.i
+.PHONY : src/external/lwext4/src/ext4_dir_idx.c.i
+
+src/external/lwext4/src/ext4_dir_idx.s: src/external/lwext4/src/ext4_dir_idx.c.s
+.PHONY : src/external/lwext4/src/ext4_dir_idx.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_dir_idx.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_dir_idx.c.s
+.PHONY : src/external/lwext4/src/ext4_dir_idx.c.s
+
+src/external/lwext4/src/ext4_extent.o: src/external/lwext4/src/ext4_extent.c.o
+.PHONY : src/external/lwext4/src/ext4_extent.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_extent.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_extent.c.o
+.PHONY : src/external/lwext4/src/ext4_extent.c.o
+
+src/external/lwext4/src/ext4_extent.i: src/external/lwext4/src/ext4_extent.c.i
+.PHONY : src/external/lwext4/src/ext4_extent.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_extent.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_extent.c.i
+.PHONY : src/external/lwext4/src/ext4_extent.c.i
+
+src/external/lwext4/src/ext4_extent.s: src/external/lwext4/src/ext4_extent.c.s
+.PHONY : src/external/lwext4/src/ext4_extent.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_extent.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_extent.c.s
+.PHONY : src/external/lwext4/src/ext4_extent.c.s
+
+src/external/lwext4/src/ext4_fs.o: src/external/lwext4/src/ext4_fs.c.o
+.PHONY : src/external/lwext4/src/ext4_fs.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_fs.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_fs.c.o
+.PHONY : src/external/lwext4/src/ext4_fs.c.o
+
+src/external/lwext4/src/ext4_fs.i: src/external/lwext4/src/ext4_fs.c.i
+.PHONY : src/external/lwext4/src/ext4_fs.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_fs.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_fs.c.i
+.PHONY : src/external/lwext4/src/ext4_fs.c.i
+
+src/external/lwext4/src/ext4_fs.s: src/external/lwext4/src/ext4_fs.c.s
+.PHONY : src/external/lwext4/src/ext4_fs.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_fs.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_fs.c.s
+.PHONY : src/external/lwext4/src/ext4_fs.c.s
+
+src/external/lwext4/src/ext4_hash.o: src/external/lwext4/src/ext4_hash.c.o
+.PHONY : src/external/lwext4/src/ext4_hash.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_hash.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_hash.c.o
+.PHONY : src/external/lwext4/src/ext4_hash.c.o
+
+src/external/lwext4/src/ext4_hash.i: src/external/lwext4/src/ext4_hash.c.i
+.PHONY : src/external/lwext4/src/ext4_hash.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_hash.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_hash.c.i
+.PHONY : src/external/lwext4/src/ext4_hash.c.i
+
+src/external/lwext4/src/ext4_hash.s: src/external/lwext4/src/ext4_hash.c.s
+.PHONY : src/external/lwext4/src/ext4_hash.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_hash.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_hash.c.s
+.PHONY : src/external/lwext4/src/ext4_hash.c.s
+
+src/external/lwext4/src/ext4_ialloc.o: src/external/lwext4/src/ext4_ialloc.c.o
+.PHONY : src/external/lwext4/src/ext4_ialloc.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_ialloc.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_ialloc.c.o
+.PHONY : src/external/lwext4/src/ext4_ialloc.c.o
+
+src/external/lwext4/src/ext4_ialloc.i: src/external/lwext4/src/ext4_ialloc.c.i
+.PHONY : src/external/lwext4/src/ext4_ialloc.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_ialloc.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_ialloc.c.i
+.PHONY : src/external/lwext4/src/ext4_ialloc.c.i
+
+src/external/lwext4/src/ext4_ialloc.s: src/external/lwext4/src/ext4_ialloc.c.s
+.PHONY : src/external/lwext4/src/ext4_ialloc.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_ialloc.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_ialloc.c.s
+.PHONY : src/external/lwext4/src/ext4_ialloc.c.s
+
+src/external/lwext4/src/ext4_inode.o: src/external/lwext4/src/ext4_inode.c.o
+.PHONY : src/external/lwext4/src/ext4_inode.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_inode.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_inode.c.o
+.PHONY : src/external/lwext4/src/ext4_inode.c.o
+
+src/external/lwext4/src/ext4_inode.i: src/external/lwext4/src/ext4_inode.c.i
+.PHONY : src/external/lwext4/src/ext4_inode.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_inode.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_inode.c.i
+.PHONY : src/external/lwext4/src/ext4_inode.c.i
+
+src/external/lwext4/src/ext4_inode.s: src/external/lwext4/src/ext4_inode.c.s
+.PHONY : src/external/lwext4/src/ext4_inode.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_inode.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_inode.c.s
+.PHONY : src/external/lwext4/src/ext4_inode.c.s
+
+src/external/lwext4/src/ext4_journal.o: src/external/lwext4/src/ext4_journal.c.o
+.PHONY : src/external/lwext4/src/ext4_journal.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_journal.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_journal.c.o
+.PHONY : src/external/lwext4/src/ext4_journal.c.o
+
+src/external/lwext4/src/ext4_journal.i: src/external/lwext4/src/ext4_journal.c.i
+.PHONY : src/external/lwext4/src/ext4_journal.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_journal.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_journal.c.i
+.PHONY : src/external/lwext4/src/ext4_journal.c.i
+
+src/external/lwext4/src/ext4_journal.s: src/external/lwext4/src/ext4_journal.c.s
+.PHONY : src/external/lwext4/src/ext4_journal.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_journal.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_journal.c.s
+.PHONY : src/external/lwext4/src/ext4_journal.c.s
+
+src/external/lwext4/src/ext4_mbr.o: src/external/lwext4/src/ext4_mbr.c.o
+.PHONY : src/external/lwext4/src/ext4_mbr.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_mbr.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_mbr.c.o
+.PHONY : src/external/lwext4/src/ext4_mbr.c.o
+
+src/external/lwext4/src/ext4_mbr.i: src/external/lwext4/src/ext4_mbr.c.i
+.PHONY : src/external/lwext4/src/ext4_mbr.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_mbr.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_mbr.c.i
+.PHONY : src/external/lwext4/src/ext4_mbr.c.i
+
+src/external/lwext4/src/ext4_mbr.s: src/external/lwext4/src/ext4_mbr.c.s
+.PHONY : src/external/lwext4/src/ext4_mbr.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_mbr.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_mbr.c.s
+.PHONY : src/external/lwext4/src/ext4_mbr.c.s
+
+src/external/lwext4/src/ext4_super.o: src/external/lwext4/src/ext4_super.c.o
+.PHONY : src/external/lwext4/src/ext4_super.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_super.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_super.c.o
+.PHONY : src/external/lwext4/src/ext4_super.c.o
+
+src/external/lwext4/src/ext4_super.i: src/external/lwext4/src/ext4_super.c.i
+.PHONY : src/external/lwext4/src/ext4_super.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_super.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_super.c.i
+.PHONY : src/external/lwext4/src/ext4_super.c.i
+
+src/external/lwext4/src/ext4_super.s: src/external/lwext4/src/ext4_super.c.s
+.PHONY : src/external/lwext4/src/ext4_super.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_super.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_super.c.s
+.PHONY : src/external/lwext4/src/ext4_super.c.s
+
+src/external/lwext4/src/ext4_trans.o: src/external/lwext4/src/ext4_trans.c.o
+.PHONY : src/external/lwext4/src/ext4_trans.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_trans.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_trans.c.o
+.PHONY : src/external/lwext4/src/ext4_trans.c.o
+
+src/external/lwext4/src/ext4_trans.i: src/external/lwext4/src/ext4_trans.c.i
+.PHONY : src/external/lwext4/src/ext4_trans.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_trans.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_trans.c.i
+.PHONY : src/external/lwext4/src/ext4_trans.c.i
+
+src/external/lwext4/src/ext4_trans.s: src/external/lwext4/src/ext4_trans.c.s
+.PHONY : src/external/lwext4/src/ext4_trans.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_trans.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_trans.c.s
+.PHONY : src/external/lwext4/src/ext4_trans.c.s
+
+src/external/lwext4/src/ext4_xattr.o: src/external/lwext4/src/ext4_xattr.c.o
+.PHONY : src/external/lwext4/src/ext4_xattr.o
+
+# target to build an object file
+src/external/lwext4/src/ext4_xattr.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_xattr.c.o
+.PHONY : src/external/lwext4/src/ext4_xattr.c.o
+
+src/external/lwext4/src/ext4_xattr.i: src/external/lwext4/src/ext4_xattr.c.i
+.PHONY : src/external/lwext4/src/ext4_xattr.i
+
+# target to preprocess a source file
+src/external/lwext4/src/ext4_xattr.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_xattr.c.i
+.PHONY : src/external/lwext4/src/ext4_xattr.c.i
+
+src/external/lwext4/src/ext4_xattr.s: src/external/lwext4/src/ext4_xattr.c.s
+.PHONY : src/external/lwext4/src/ext4_xattr.s
+
+# target to generate assembly for a file
+src/external/lwext4/src/ext4_xattr.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/external/lwext4/src/ext4_xattr.c.s
+.PHONY : src/external/lwext4/src/ext4_xattr.c.s
+
+src/fs/lwext4_adapter.o: src/fs/lwext4_adapter.cpp.o
+.PHONY : src/fs/lwext4_adapter.o
+
+# target to build an object file
+src/fs/lwext4_adapter.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/fs/lwext4_adapter.cpp.o
+.PHONY : src/fs/lwext4_adapter.cpp.o
+
+src/fs/lwext4_adapter.i: src/fs/lwext4_adapter.cpp.i
+.PHONY : src/fs/lwext4_adapter.i
+
+# target to preprocess a source file
+src/fs/lwext4_adapter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/fs/lwext4_adapter.cpp.i
+.PHONY : src/fs/lwext4_adapter.cpp.i
+
+src/fs/lwext4_adapter.s: src/fs/lwext4_adapter.cpp.s
+.PHONY : src/fs/lwext4_adapter.s
+
+# target to generate assembly for a file
+src/fs/lwext4_adapter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/fs/lwext4_adapter.cpp.s
+.PHONY : src/fs/lwext4_adapter.cpp.s
+
 src/kernel/kernel.o: src/kernel/kernel.cpp.o
 .PHONY : src/kernel/kernel.o
 
@@ -221,6 +749,30 @@ src/kernel/kernel.s: src/kernel/kernel.cpp.s
 src/kernel/kernel.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/kernel/kernel.cpp.s
 .PHONY : src/kernel/kernel.cpp.s
+
+src/kernel/utils.o: src/kernel/utils.cpp.o
+.PHONY : src/kernel/utils.o
+
+# target to build an object file
+src/kernel/utils.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/kernel/utils.cpp.o
+.PHONY : src/kernel/utils.cpp.o
+
+src/kernel/utils.i: src/kernel/utils.cpp.i
+.PHONY : src/kernel/utils.i
+
+# target to preprocess a source file
+src/kernel/utils.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/kernel/utils.cpp.i
+.PHONY : src/kernel/utils.cpp.i
+
+src/kernel/utils.s: src/kernel/utils.cpp.s
+.PHONY : src/kernel/utils.s
+
+# target to generate assembly for a file
+src/kernel/utils.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/kernel/utils.cpp.s
+.PHONY : src/kernel/utils.cpp.s
 
 src/print/print.o: src/print/print.cpp.o
 .PHONY : src/print/print.o
@@ -260,12 +812,81 @@ help:
 	@echo "... src/disk/disk.o"
 	@echo "... src/disk/disk.i"
 	@echo "... src/disk/disk.s"
+	@echo "... src/drivers/font.o"
+	@echo "... src/drivers/font.i"
+	@echo "... src/drivers/font.s"
 	@echo "... src/drivers/vga.o"
 	@echo "... src/drivers/vga.i"
 	@echo "... src/drivers/vga.s"
+	@echo "... src/external/lwext4/src/ext4.o"
+	@echo "... src/external/lwext4/src/ext4.i"
+	@echo "... src/external/lwext4/src/ext4.s"
+	@echo "... src/external/lwext4/src/ext4_balloc.o"
+	@echo "... src/external/lwext4/src/ext4_balloc.i"
+	@echo "... src/external/lwext4/src/ext4_balloc.s"
+	@echo "... src/external/lwext4/src/ext4_bcache.o"
+	@echo "... src/external/lwext4/src/ext4_bcache.i"
+	@echo "... src/external/lwext4/src/ext4_bcache.s"
+	@echo "... src/external/lwext4/src/ext4_bitmap.o"
+	@echo "... src/external/lwext4/src/ext4_bitmap.i"
+	@echo "... src/external/lwext4/src/ext4_bitmap.s"
+	@echo "... src/external/lwext4/src/ext4_block_group.o"
+	@echo "... src/external/lwext4/src/ext4_block_group.i"
+	@echo "... src/external/lwext4/src/ext4_block_group.s"
+	@echo "... src/external/lwext4/src/ext4_blockdev.o"
+	@echo "... src/external/lwext4/src/ext4_blockdev.i"
+	@echo "... src/external/lwext4/src/ext4_blockdev.s"
+	@echo "... src/external/lwext4/src/ext4_crc32.o"
+	@echo "... src/external/lwext4/src/ext4_crc32.i"
+	@echo "... src/external/lwext4/src/ext4_crc32.s"
+	@echo "... src/external/lwext4/src/ext4_debug.o"
+	@echo "... src/external/lwext4/src/ext4_debug.i"
+	@echo "... src/external/lwext4/src/ext4_debug.s"
+	@echo "... src/external/lwext4/src/ext4_dir.o"
+	@echo "... src/external/lwext4/src/ext4_dir.i"
+	@echo "... src/external/lwext4/src/ext4_dir.s"
+	@echo "... src/external/lwext4/src/ext4_dir_idx.o"
+	@echo "... src/external/lwext4/src/ext4_dir_idx.i"
+	@echo "... src/external/lwext4/src/ext4_dir_idx.s"
+	@echo "... src/external/lwext4/src/ext4_extent.o"
+	@echo "... src/external/lwext4/src/ext4_extent.i"
+	@echo "... src/external/lwext4/src/ext4_extent.s"
+	@echo "... src/external/lwext4/src/ext4_fs.o"
+	@echo "... src/external/lwext4/src/ext4_fs.i"
+	@echo "... src/external/lwext4/src/ext4_fs.s"
+	@echo "... src/external/lwext4/src/ext4_hash.o"
+	@echo "... src/external/lwext4/src/ext4_hash.i"
+	@echo "... src/external/lwext4/src/ext4_hash.s"
+	@echo "... src/external/lwext4/src/ext4_ialloc.o"
+	@echo "... src/external/lwext4/src/ext4_ialloc.i"
+	@echo "... src/external/lwext4/src/ext4_ialloc.s"
+	@echo "... src/external/lwext4/src/ext4_inode.o"
+	@echo "... src/external/lwext4/src/ext4_inode.i"
+	@echo "... src/external/lwext4/src/ext4_inode.s"
+	@echo "... src/external/lwext4/src/ext4_journal.o"
+	@echo "... src/external/lwext4/src/ext4_journal.i"
+	@echo "... src/external/lwext4/src/ext4_journal.s"
+	@echo "... src/external/lwext4/src/ext4_mbr.o"
+	@echo "... src/external/lwext4/src/ext4_mbr.i"
+	@echo "... src/external/lwext4/src/ext4_mbr.s"
+	@echo "... src/external/lwext4/src/ext4_super.o"
+	@echo "... src/external/lwext4/src/ext4_super.i"
+	@echo "... src/external/lwext4/src/ext4_super.s"
+	@echo "... src/external/lwext4/src/ext4_trans.o"
+	@echo "... src/external/lwext4/src/ext4_trans.i"
+	@echo "... src/external/lwext4/src/ext4_trans.s"
+	@echo "... src/external/lwext4/src/ext4_xattr.o"
+	@echo "... src/external/lwext4/src/ext4_xattr.i"
+	@echo "... src/external/lwext4/src/ext4_xattr.s"
+	@echo "... src/fs/lwext4_adapter.o"
+	@echo "... src/fs/lwext4_adapter.i"
+	@echo "... src/fs/lwext4_adapter.s"
 	@echo "... src/kernel/kernel.o"
 	@echo "... src/kernel/kernel.i"
 	@echo "... src/kernel/kernel.s"
+	@echo "... src/kernel/utils.o"
+	@echo "... src/kernel/utils.i"
+	@echo "... src/kernel/utils.s"
 	@echo "... src/print/print.o"
 	@echo "... src/print/print.i"
 	@echo "... src/print/print.s"

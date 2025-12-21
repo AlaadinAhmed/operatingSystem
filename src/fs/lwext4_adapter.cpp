@@ -48,8 +48,6 @@ struct ext4_blockdev* fs::get_lwext4_blockdev() {
     iface.close = disk_close;
     iface.bread = disk_read;
     iface.bwrite = disk_write;
-    iface.ph_bread = disk_ph_read;
-    iface.ph_bwrite = disk_ph_write;
     iface.ph_bsize = 512;
     iface.ph_bcnt = 1440 * 2; // 1.44MB floppy
 
