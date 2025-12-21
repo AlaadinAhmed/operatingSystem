@@ -25,7 +25,10 @@ add_custom_command(
 )
 
 # Kernel
-add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp)
+# add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp)
+# Uncomment the following line when lwext4 is added
+add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp src/fs/lwext4_adapter.cpp src/external/lwext4/src/*.c)
+target_include_directories(kernel.elf PRIVATE src/external/lwext4/include)
 target_include_directories(kernel.elf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_target_properties(kernel.elf PROPERTIES LINK_FLAGS "-m32 -nostdlib -T ${CMAKE_SOURCE_DIR}/linker.ld -no-pie -fno-pie")
 

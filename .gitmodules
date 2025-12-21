@@ -1,0 +1,3 @@
+[submodule "src/external/lwext4"]
+	path = src/external/lwext4
+	url = https://github.com/gkostka/lwext4.git
