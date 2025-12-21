@@ -1,1 +1,27 @@
+# Build Artifacts
 build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+Makefile
+
+# Binaries
+*.bin
+*.elf
+*.o
+*.a
+*.so
+
+# Logs
+*.log
+
+# Temporary Files
+s_blocks_count
+*.swp
+*.swo
+*~
+
+# OS Specific
+.DS_Store
+Thumbs.db
