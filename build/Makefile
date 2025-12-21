@@ -117,17 +117,134 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named MyKernel
+# Target rules for targets named kernel.elf
 
 # Build rule for target.
-MyKernel: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 MyKernel
-.PHONY : MyKernel
+kernel.elf: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 kernel.elf
+.PHONY : kernel.elf
 
 # fast build rule for target.
-MyKernel/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyKernel.dir/build.make CMakeFiles/MyKernel.dir/build
-.PHONY : MyKernel/fast
+kernel.elf/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/build
+.PHONY : kernel.elf/fast
+
+#=============================================================================
+# Target rules for targets named MyOS
+
+# Build rule for target.
+MyOS: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 MyOS
+.PHONY : MyOS
+
+# fast build rule for target.
+MyOS/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyOS.dir/build.make CMakeFiles/MyOS.dir/build
+.PHONY : MyOS/fast
+
+src/boot/kernel_entry.o: src/boot/kernel_entry.asm.o
+.PHONY : src/boot/kernel_entry.o
+
+# target to build an object file
+src/boot/kernel_entry.asm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/boot/kernel_entry.asm.o
+.PHONY : src/boot/kernel_entry.asm.o
+
+src/disk/disk.o: src/disk/disk.cpp.o
+.PHONY : src/disk/disk.o
+
+# target to build an object file
+src/disk/disk.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/disk/disk.cpp.o
+.PHONY : src/disk/disk.cpp.o
+
+src/disk/disk.i: src/disk/disk.cpp.i
+.PHONY : src/disk/disk.i
+
+# target to preprocess a source file
+src/disk/disk.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/disk/disk.cpp.i
+.PHONY : src/disk/disk.cpp.i
+
+src/disk/disk.s: src/disk/disk.cpp.s
+.PHONY : src/disk/disk.s
+
+# target to generate assembly for a file
+src/disk/disk.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/disk/disk.cpp.s
+.PHONY : src/disk/disk.cpp.s
+
+src/drivers/vga.o: src/drivers/vga.cpp.o
+.PHONY : src/drivers/vga.o
+
+# target to build an object file
+src/drivers/vga.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/drivers/vga.cpp.o
+.PHONY : src/drivers/vga.cpp.o
+
+src/drivers/vga.i: src/drivers/vga.cpp.i
+.PHONY : src/drivers/vga.i
+
+# target to preprocess a source file
+src/drivers/vga.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/drivers/vga.cpp.i
+.PHONY : src/drivers/vga.cpp.i
+
+src/drivers/vga.s: src/drivers/vga.cpp.s
+.PHONY : src/drivers/vga.s
+
+# target to generate assembly for a file
+src/drivers/vga.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/drivers/vga.cpp.s
+.PHONY : src/drivers/vga.cpp.s
+
+src/kernel/kernel.o: src/kernel/kernel.cpp.o
+.PHONY : src/kernel/kernel.o
+
+# target to build an object file
+src/kernel/kernel.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/kernel/kernel.cpp.o
+.PHONY : src/kernel/kernel.cpp.o
+
+src/kernel/kernel.i: src/kernel/kernel.cpp.i
+.PHONY : src/kernel/kernel.i
+
+# target to preprocess a source file
+src/kernel/kernel.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/kernel/kernel.cpp.i
+.PHONY : src/kernel/kernel.cpp.i
+
+src/kernel/kernel.s: src/kernel/kernel.cpp.s
+.PHONY : src/kernel/kernel.s
+
+# target to generate assembly for a file
+src/kernel/kernel.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/kernel/kernel.cpp.s
+.PHONY : src/kernel/kernel.cpp.s
+
+src/print/print.o: src/print/print.cpp.o
+.PHONY : src/print/print.o
+
+# target to build an object file
+src/print/print.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/print/print.cpp.o
+.PHONY : src/print/print.cpp.o
+
+src/print/print.i: src/print/print.cpp.i
+.PHONY : src/print/print.i
+
+# target to preprocess a source file
+src/print/print.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/print/print.cpp.i
+.PHONY : src/print/print.cpp.i
+
+src/print/print.s: src/print/print.cpp.s
+.PHONY : src/print/print.s
+
+# target to generate assembly for a file
+src/print/print.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/src/print/print.cpp.s
+.PHONY : src/print/print.cpp.s
 
 # Help Target
 help:
@@ -137,7 +254,21 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... MyKernel"
+	@echo "... MyOS"
+	@echo "... kernel.elf"
+	@echo "... src/boot/kernel_entry.o"
+	@echo "... src/disk/disk.o"
+	@echo "... src/disk/disk.i"
+	@echo "... src/disk/disk.s"
+	@echo "... src/drivers/vga.o"
+	@echo "... src/drivers/vga.i"
+	@echo "... src/drivers/vga.s"
+	@echo "... src/kernel/kernel.o"
+	@echo "... src/kernel/kernel.i"
+	@echo "... src/kernel/kernel.s"
+	@echo "... src/print/print.o"
+	@echo "... src/print/print.i"
+	@echo "... src/print/print.s"
 .PHONY : help
 
 

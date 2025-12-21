@@ -63,11 +63,13 @@ CMAKE_BINARY_DIR = /home/aladdin/Projects/OS/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/MyKernel.dir/all
+all: CMakeFiles/kernel.elf.dir/all
+all: CMakeFiles/MyOS.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
-codegen: CMakeFiles/MyKernel.dir/codegen
+codegen: CMakeFiles/kernel.elf.dir/codegen
+codegen: CMakeFiles/MyOS.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -75,40 +77,73 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/MyKernel.dir/clean
+clean: CMakeFiles/kernel.elf.dir/clean
+clean: CMakeFiles/MyOS.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/MyKernel.dir
+# Target rules for target CMakeFiles/kernel.elf.dir
 
 # All Build rule for target.
-CMakeFiles/MyKernel.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyKernel.dir/build.make CMakeFiles/MyKernel.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyKernel.dir/build.make CMakeFiles/MyKernel.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=1 "Built target MyKernel"
-.PHONY : CMakeFiles/MyKernel.dir/all
+CMakeFiles/kernel.elf.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=5,6,7,8,9,10 "Built target kernel.elf"
+.PHONY : CMakeFiles/kernel.elf.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/MyKernel.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/aladdin/Projects/OS/build/CMakeFiles 1
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/MyKernel.dir/all
+CMakeFiles/kernel.elf.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/aladdin/Projects/OS/build/CMakeFiles 6
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/kernel.elf.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/aladdin/Projects/OS/build/CMakeFiles 0
-.PHONY : CMakeFiles/MyKernel.dir/rule
+.PHONY : CMakeFiles/kernel.elf.dir/rule
 
 # Convenience name for target.
-MyKernel: CMakeFiles/MyKernel.dir/rule
-.PHONY : MyKernel
+kernel.elf: CMakeFiles/kernel.elf.dir/rule
+.PHONY : kernel.elf
 
 # codegen rule for target.
-CMakeFiles/MyKernel.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyKernel.dir/build.make CMakeFiles/MyKernel.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=1 "Finished codegen for target MyKernel"
-.PHONY : CMakeFiles/MyKernel.dir/codegen
+CMakeFiles/kernel.elf.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=5,6,7,8,9,10 "Finished codegen for target kernel.elf"
+.PHONY : CMakeFiles/kernel.elf.dir/codegen
 
 # clean rule for target.
-CMakeFiles/MyKernel.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyKernel.dir/build.make CMakeFiles/MyKernel.dir/clean
-.PHONY : CMakeFiles/MyKernel.dir/clean
+CMakeFiles/kernel.elf.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kernel.elf.dir/build.make CMakeFiles/kernel.elf.dir/clean
+.PHONY : CMakeFiles/kernel.elf.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/MyOS.dir
+
+# All Build rule for target.
+CMakeFiles/MyOS.dir/all: CMakeFiles/kernel.elf.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyOS.dir/build.make CMakeFiles/MyOS.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyOS.dir/build.make CMakeFiles/MyOS.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=1,2,3,4 "Built target MyOS"
+.PHONY : CMakeFiles/MyOS.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/MyOS.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/aladdin/Projects/OS/build/CMakeFiles 10
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/MyOS.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/aladdin/Projects/OS/build/CMakeFiles 0
+.PHONY : CMakeFiles/MyOS.dir/rule
+
+# Convenience name for target.
+MyOS: CMakeFiles/MyOS.dir/rule
+.PHONY : MyOS
+
+# codegen rule for target.
+CMakeFiles/MyOS.dir/codegen: CMakeFiles/kernel.elf.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyOS.dir/build.make CMakeFiles/MyOS.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aladdin/Projects/OS/build/CMakeFiles --progress-num=1,2,3,4 "Finished codegen for target MyOS"
+.PHONY : CMakeFiles/MyOS.dir/codegen
+
+# clean rule for target.
+CMakeFiles/MyOS.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyOS.dir/build.make CMakeFiles/MyOS.dir/clean
+.PHONY : CMakeFiles/MyOS.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

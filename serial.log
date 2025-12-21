@@ -1,0 +1,16 @@
+Kernel initialized successfully!
+Ext2 File Detected
+Total Blocks: 1440
+Inodes Count: 176
+Inode Table Block: 10
+Free Blocks: 1358
+Block Size: 1024
+Reading Inode Table at LBA: 20
+Inode Size: 256
+Root Inode Block[0]: 54
+Reading Directory at LBA: 108
+Files in Root:
+- . (Inode: 2, RecLen: 12)
+- .. (Inode: 2, RecLen: 12)
+- lost+found (Inode: 11, RecLen: 20)
+- logo.bmp (Inode: 12, RecLen: 980)

@@ -38,8 +38,9 @@ CMAKE_ASM_NASM_FLAGS_RELEASE:STRING=
 //Flags used by the ASM_NASM compiler during RELWITHDEBINFO builds.
 CMAKE_ASM_NASM_FLAGS_RELWITHDEBINFO:STRING=
 
-//No help, variable specified on the command line.
-CMAKE_BUILD_TYPE:STRING=Debug
+//Choose the type of build, options are: None Debug Release RelWithDebInfo
+// MinSizeRel ...
+CMAKE_BUILD_TYPE:STRING=
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -114,8 +115,8 @@ CMAKE_EXE_LINKER_FLAGS_RELEASE:STRING=
 //Flags used by the linker during RELWITHDEBINFO builds.
 CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 
-//No help, variable specified on the command line.
-CMAKE_EXPORT_COMPILE_COMMANDS:UNINITIALIZED=1
+//Enable/Disable output of compile commands during generation.
+CMAKE_EXPORT_COMPILE_COMMANDS:BOOL=
 
 //Value Computed by CMake.
 CMAKE_FIND_PACKAGE_REDIRECTS_DIR:STATIC=/home/aladdin/Projects/OS/build/CMakeFiles/pkgRedirects
@@ -243,15 +244,6 @@ MyOS_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 MyOS_SOURCE_DIR:STATIC=/home/aladdin/Projects/OS
-
-//Value Computed by CMake
-os_BINARY_DIR:STATIC=/home/aladdin/Projects/OS/build
-
-//Value Computed by CMake
-os_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-os_SOURCE_DIR:STATIC=/home/aladdin/Projects/OS
 
 
 ########################
