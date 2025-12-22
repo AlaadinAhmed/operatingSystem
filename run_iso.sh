@@ -14,8 +14,8 @@ echo "Building project..."
 cmake --build build
 
 # 1. Create and Format (32MB)
-dd if=/dev/zero of=build/disk.img bs=1M count=32
-mkfs.ext2 -b 1024 build/disk.img
+dd if=/dev/zero of=build/disk.img bs=1k count=32768
+mkfs.ext4 -O ^has_journal,^64bit,^metadata_csum -b 1024 build/disk.img
 # ... after mkfs.ext2 and dd-ing your kernel ...
 
 # Inject your BMP into the ext2 root directory
@@ -34,4 +34,4 @@ dd if=build/kernel.bin of=build/disk.img conv=notrunc bs=512 seek=2048
 
 # Run in QEMU
 echo "Running in QEMU..."
-qemu-system-x86_64 -hda build/disk.img -vga std -serial stdio -debugcon file:debug.log
+qemu-system-x86_64 -hda build/disk.img -vga std -serial stdio

@@ -437,56 +437,34 @@ int main(int arg, char **argv)
    typedef char stbtt__check_size16[sizeof(stbtt_int16)==2 ? 1 : -1];
 
    // e.g. #define your own STBTT_ifloor/STBTT_iceil() to avoid math.h
-   #ifndef STBTT_ifloor
-   #include <math.h>
-   #define STBTT_ifloor(x)   ((int) floor(x))
-   #define STBTT_iceil(x)    ((int) ceil(x))
-   #endif
+   #define STBTT_ifloor(x)   ((int)my_floor(x))
+   #define STBTT_iceil(x)    ((int)my_ceil(x))
 
-   #ifndef STBTT_sqrt
-   #include <math.h>
-   #define STBTT_sqrt(x)      sqrt(x)
-   #define STBTT_pow(x,y)     pow(x,y)
-   #endif
+   #define STBTT_sqrt(x)      my_sqrt(x)
+   #define STBTT_pow(x,y)     my_pow(x,y)
 
-   #ifndef STBTT_fmod
-   #include <math.h>
-   #define STBTT_fmod(x,y)    fmod(x,y)
-   #endif
+   #define STBTT_fmod(x,y)    my_fmod(x,y)
 
-   #ifndef STBTT_cos
-   #include <math.h>
-   #define STBTT_cos(x)       cos(x)
-   #define STBTT_acos(x)      acos(x)
-   #endif
+   #define STBTT_cos(x)       my_cos(x)
+   #define STBTT_acos(x)      my_acos(x)
 
-   #ifndef STBTT_fabs
-   #include <math.h>
-   #define STBTT_fabs(x)      fabs(x)
-   #endif
+   #define STBTT_fabs(x)      my_fabs(x)
 
    // #define your own functions "STBTT_malloc" / "STBTT_free" to avoid malloc.h
-   #ifndef STBTT_malloc
-   #include <stdlib.h>
-   #define STBTT_malloc(x,u)  ((void)(u),malloc(x))
-   #define STBTT_free(x,u)    ((void)(u),free(x))
-   #endif
+   // Using kernel memory functions
+   #define STBTT_malloc(x,u)  kmalloc(x)
+   #define STBTT_free(x,u)    kfree(x)
+   #define STBTT_realloc(p,old_sz,new_sz,u) krealloc(p, new_sz)
 
-   #ifndef STBTT_assert
-   #include <assert.h>
-   #define STBTT_assert(x)    assert(x)
-   #endif
+   // #define your own STBTT_assert to avoid assert.h
+   #define STBTT_assert(x) ((void)(x)) // Use (void)(x) to make it a statement
 
-   #ifndef STBTT_strlen
-   #include <string.h>
-   #define STBTT_strlen(x)    strlen(x)
-   #endif
+   // #define your own STBTT_strlen to avoid string.h
+   #define STBTT_strlen(x)    my_strlen(x)
 
-   #ifndef STBTT_memcpy
-   #include <string.h>
+   // #define your own STBTT_memcpy/STBTT_memset to avoid string.h
    #define STBTT_memcpy       memcpy
    #define STBTT_memset       memset
-   #endif
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////

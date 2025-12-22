@@ -91,7 +91,7 @@ void print_hex(unsigned int num) {
   }
 }
 
-void printf(const char *fmt, ...) {
+void kprintf(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   for (int i = 0; fmt[i] != '\0'; i++) {

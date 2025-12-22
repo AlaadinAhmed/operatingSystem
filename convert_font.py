@@ -1,4 +1,9 @@
 import sys
+import readline
+import glob
+
+def complete(text, state):
+    return (glob.glob(text+'*')+[None])[state]
 
 def convert_to_header(input_file, output_file, array_name):
     with open(input_file, 'rb') as f:
@@ -20,4 +25,23 @@ def convert_to_header(input_file, output_file, array_name):
         f.write('#endif\n')
 
 if __name__ == '__main__':
-    convert_to_header('Roboto-Regular.ttf', 'src/drivers/roboto_font.h', 'roboto_font')
+    readline.set_completer_delims(' \t\n;')
+    readline.parse_and_bind("tab: complete")
+    readline.set_completer(complete)
+
+    input_file = input('Font file to convert (e.g., Roboto-Regular.ttf): ')
+    if not input_file:
+        input_file = 'Roboto-Regular.ttf'
+        print(f"Using default: {input_file}")
+
+    output_file = input('Output header file (e.g., resources/font/roboto_font.h): ')
+    if not output_file:
+        output_file = 'resource/font/roboto_font.h'
+        print(f"Using default: {output_file}")
+
+    array_name = input("Array name (e.g., roboto_font): ")
+    if not array_name:
+        array_name = 'roboto_font'
+        print(f"Using default: {array_name}")
+
+    convert_to_header(input_file, output_file, array_name)

@@ -6,10 +6,11 @@ enable_language(ASM_NASM)
 enable_language(CXX)
 
 # Compiler flags for 32-bit freestanding
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -ffreestanding -fno-pie -fno-stack-protector -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -ffreestanding -fno-pie -fno-stack-protector -g -msse")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32 -ffreestanding -fno-pie -fno-stack-protector -g")
 add_definitions(-DCONFIG_EXT4_USE_XATTR=1 -DCONFIG_XATTR_ENABLE=1 -DCONFIG_META_CSUM_ENABLE=1)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
 # Bootloader
 add_custom_command(
     OUTPUT boot.bin
@@ -26,16 +27,43 @@ add_custom_command(
     COMMENT "Assembling loader"
 )
 
-# Kernel
+# LWEXT4 Library
 file(GLOB LWEXT4_SOURCES "src/external/lwext4/src/*.c")
 list(REMOVE_ITEM LWEXT4_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/external/lwext4/src/ext4_mkfs.c")
-add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/kernel/utils.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp src/drivers/font.cpp src/fs/lwext4_adapter.cpp ${LWEXT4_SOURCES} src/external/stb_truetype.h)
-target_link_libraries(kernel.elf gcc)
-target_include_directories(kernel.elf PRIVATE src/external/lwext4/include src/external)
+add_library(lwext4_lib STATIC ${LWEXT4_SOURCES})
+target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1)
+target_include_directories(lwext4_lib PUBLIC src/external/lwext4/include)
 
-# Fallback without lwext4
-# add_executable(kernel.elf src/boot/kernel_entry.asm src/kernel/kernel.cpp src/disk/disk.cpp src/print/print.cpp src/drivers/vga.cpp)
-target_include_directories(kernel.elf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Drivers Library
+add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp)
+target_include_directories(drivers_lib PUBLIC include/drivers src/external)
+
+# FS Library
+add_library(fs_lib STATIC src/fs/lwext4_adapter.cpp)
+target_link_libraries(fs_lib PRIVATE disk_lib)
+target_include_directories(fs_lib PUBLIC include/fs src/external/lwext4/include)
+
+# Shell Library
+add_library(shell_lib STATIC src/shell/shell.cpp)
+target_include_directories(shell_lib PUBLIC include/shell src/external/lwext4/include)
+
+# Print Library
+add_library(print_lib STATIC src/print/print.cpp)
+target_include_directories(print_lib PUBLIC include/print)
+
+# Disk Library
+add_library(disk_lib STATIC src/disk/disk.cpp)
+target_include_directories(disk_lib PUBLIC include/disk)
+
+# Kernel Library
+add_library(kernel_lib STATIC src/kernel/kernel.cpp src/kernel/utils.cpp src/system/system.cpp)
+target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include)
+
+# Kernel Executable
+add_executable(kernel.elf src/boot/kernel_entry.asm)
+target_link_libraries(kernel.elf PRIVATE kernel_lib disk_lib print_lib shell_lib fs_lib drivers_lib lwext4_lib gcc)
+target_include_directories(kernel.elf PRIVATE src/external)
+
 set_target_properties(kernel.elf PROPERTIES LINK_FLAGS "-m32 -nostdlib -T ${CMAKE_SOURCE_DIR}/linker.ld -no-pie -fno-pie")
 
 # Extract Binary

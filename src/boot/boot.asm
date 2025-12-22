@@ -1,6 +1,7 @@
 [org 0x7c00]
 [bits 16]
-
+%define NULL_T 0x00 
+%define ENDL 0x0D, 0x0A, 0x00
 start:
     jmp main
 
@@ -9,9 +10,8 @@ main:
     mov [BOOT_DISK], dl
 
     ; Debug: Boot started
-    mov dx, 0xe9
-    mov al, 'B'
-    out dx, al
+    mov si, START_BOOT
+    call log_message
 
     xor ax, ax
     mov es, ax
@@ -20,6 +20,8 @@ main:
     mov sp, 0x7c00
 
     ; Debug: Print Drive Number
+    mov si, DRIVE_MSG
+    call log_message
     mov al, dl
     shr al, 4
     call print_hex
@@ -76,6 +78,15 @@ print_hex:
 
 BOOT_DISK: db 0
 
+log_message:
+    lodsb
+    cmp al, 0
+    je .done
+    mov dx, 0xe9
+    out dx, al
+    jmp log_message
+.done:
+    ret
 dap:
     db 0x10     ; Size
     db 0        ; Reserved
@@ -85,5 +96,9 @@ dap:
     dd 2000     ; LBA Low
     dd 0        ; LBA High
 
+START_BOOT:
+    db "Boot Started", ENDL
+DRIVE_MSG:
+    db "Boot Drive: 0x", ENDL
 times 510 - ($ - $$) db 0
 db 0x55, 0xaa

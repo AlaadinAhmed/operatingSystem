@@ -1,19 +1,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "print/print.h"
-
-// External dependencies from utils.cpp
-extern "C" void* malloc(size_t size);
-extern "C" void free(void* ptr);
-extern "C" void* calloc(size_t nmemb, size_t size);
-extern "C" void* memset(void* s, int c, size_t n);
-extern "C" void* memcpy(void* dest, const void* src, size_t n);
+#include "memory/kmalloc.h" // For kmalloc, kfree, krealloc, memcpy, memset
 
 // Simple math implementations
-static double my_fabs(double x) { return x < 0 ? -x : x; }
-static double my_floor(double x) { return (int)x - (x < 0 && x != (int)x); }
-static double my_ceil(double x) { return (int)x + (x > 0 && x != (int)x); }
-static double my_sqrt(double x) {
+double my_fabs(double x) { return x < 0 ? -x : x; }
+double my_floor(double x) { return (int)x - (x < 0 && x != (int)x); }
+double my_ceil(double x) { return (int)x + (x > 0 && x != (int)x); }
+double my_sqrt(double x) {
     if (x < 0) return 0;
     double r = x;
     if (r == 0) return 0;
@@ -21,7 +15,7 @@ static double my_sqrt(double x) {
     return r;
 }
 
-static double my_pow(double base, double exp) {
+double my_pow(double base, double exp) {
     if (base == 0) return 0;
     if (exp == 0) return 1;
     if (exp == 1) return base;
@@ -57,11 +51,11 @@ static double my_pow(double base, double exp) {
     return 1.0; // Fallback
 }
 
-static double my_fmod(double x, double y) { return x - (int)(x/y) * y; }
+double my_fmod(double x, double y) { return x - (int)(x/y) * y; }
 
 #define PI 3.14159265358979323846
 
-static double my_cos(double x) {
+double my_cos(double x) {
     // Reduce to [-pi, pi]
     while (x > PI) x -= 2 * PI;
     while (x < -PI) x += 2 * PI;
@@ -71,7 +65,7 @@ static double my_cos(double x) {
     return 1.0 - xx / 2.0 + xx * xx / 24.0 - xx * xx * xx / 720.0 + xx * xx * xx * xx / 40320.0;
 }
 
-static double my_acos(double x) {
+double my_acos(double x) {
     // Approximation: acos(x) = pi/2 - asin(x)
     // asin(x) ~= x + x^3/6 + 3x^5/40
     if (x > 1.0) x = 1.0;
@@ -81,29 +75,12 @@ static double my_acos(double x) {
     return PI/2.0 - val;
 }
 
-static size_t my_strlen(const char* str) {
+size_t my_strlen(const char* str) {
     size_t len = 0;
     while (str[len]) len++;
     return len;
 }
 
-// STB Truetype Configuration
-#define STBTT_malloc(x,u)  ((void)(u),calloc(1,x))
-#define STBTT_free(x,u)    ((void)(u),free(x))
-#define STBTT_assert(x)    ((void)0)
-
-#define STBTT_strlen(x)    my_strlen(x)
-#define STBTT_memcpy       memcpy
-#define STBTT_memset       memset
-
-#define STBTT_ifloor(x)    ((int)my_floor(x))
-#define STBTT_iceil(x)     ((int)my_ceil(x))
-#define STBTT_sqrt(x)      my_sqrt(x)
-#define STBTT_pow(x,y)     my_pow(x,y)
-#define STBTT_fmod(x,y)    my_fmod(x,y)
-#define STBTT_cos(x)       my_cos(x)
-#define STBTT_acos(x)      my_acos(x)
-#define STBTT_fabs(x)      my_fabs(x)
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
