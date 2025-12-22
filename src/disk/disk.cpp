@@ -15,11 +15,24 @@ static inline uint8_t inb(uint16_t port) {
     return ret;
 }
 
+static int wait_disk_ready() {
+    int timeout = 1000000;
+    while ((inb(0x1F7) & 0xC0) != 0x40) {
+        if (--timeout == 0) return 1;
+    }
+    return 0;
+}
+
 void Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
-    // Select drive (Master) and LBA bits 24-27
-    outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
+    // Select drive (Master/Slave) and LBA bits 24-27
+    outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
     // Add a 400ns delay by reading the status port 4 times
-    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
+    for(int k=0; k<1000; k++) inb(0x1F7);
+
+    if (wait_disk_ready()) {
+        kprintf("Disk Read Timeout (Ready)! LBA: %d\n", lba);
+        return;
+    }
     
     // Null byte to port 0x1F1 (Error/Features) - usually not needed but good practice
     outb(0x1F1, 0x00);
@@ -33,6 +46,9 @@ void Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
     outb(0x1F5, (uint8_t)(lba >> 16));
     // Command: Read Sectors with Retry
     outb(0x1F7, 0x20);
+
+    // Add a 400ns delay
+    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
 
     // Wait for BSY to clear and DRQ to set
     // Note: This is a very basic poll. In a real OS, use interrupts or timeout.
@@ -53,13 +69,24 @@ void Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
 }
 
 void Ext2Disk::write_sector(uint32_t lba, const uint8_t* buffer) {
-    outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
+    outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
+    // Add a 400ns delay
+    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
+
+    if (wait_disk_ready()) {
+        kprintf("Disk Write Timeout (Ready)! LBA: %d\n", lba);
+        return;
+    }
+
     outb(0x1F1, 0x00);
     outb(0x1F2, 1);
     outb(0x1F3, (uint8_t)lba);
     outb(0x1F4, (uint8_t)(lba >> 8));
     outb(0x1F5, (uint8_t)(lba >> 16));
     outb(0x1F7, 0x30); // Command: Write Sectors with Retry
+
+    // Add a 400ns delay
+    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
 
     int timeout = 1000000;
     while (!(inb(0x1F7) & 0x08)) {
@@ -78,9 +105,15 @@ void Ext2Disk::write_sector(uint32_t lba, const uint8_t* buffer) {
         uint16_t tmp = ((uint16_t*)buffer)[i];
         asm volatile ("outw %0, %1" : : "a"(tmp), "Nd"((uint16_t)0x1F0));
     }
+
+    // Wait for write to complete and check for errors
+    outb(0x1F7, 0xE7); // Cache Flush (optional, but good for data integrity)
+    if (wait_disk_ready()) {
+         kprintf("Disk Write Timeout (Finish)! LBA: %d\n", lba);
+    }
 }
 
-Ext2Disk::Ext2Disk() {
+Ext2Disk::Ext2Disk(uint8_t drive_id) : m_drive_id(drive_id) {
 }
 
 void Ext2Disk::mount() {

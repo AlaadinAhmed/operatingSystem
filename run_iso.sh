@@ -13,25 +13,25 @@ cmake -S . -B build
 echo "Building project..."
 cmake --build build
 
-# 1. Create and Format (32MB)
+# 1. Create Disk Image (32MB) - for bootloader, loader, kernel
 dd if=/dev/zero of=build/disk.img bs=1k count=32768
-mkfs.ext4 -O ^has_journal,^64bit,^metadata_csum -b 1024 build/disk.img
-# ... after mkfs.ext2 and dd-ing your kernel ...
 
-# Inject your BMP into the ext2 root directory
-echo "write logo.bmp logo.bmp" | debugfs -w build/disk.img
-# 2. Add Bootloader (First 512 bytes ONLY)
-# Note: Use the actual path from your 'find' command
+# 2. Create Root Filesystem Image (28MB) - dedicated for ext4
+dd if=/dev/zero of=build/rootfs.img bs=1k count=28672
+/sbin/mke2fs -t ext4 -b 4096 -O ^64bit,^huge_file,^metadata_csum,^dir_nlink,^extra_isize,^orphan_file build/rootfs.img
+
+# Inject your BMP into the rootfs image
+echo -e "write logo.bmp logo.bmp\nwrite BBHBogle-Regular.ttf BBHBogle-Regular.ttf\nwrite Roboto-Regular.ttf Roboto-Regular.ttf" | /sbin/debugfs -w build/rootfs.img
+
+# 3. Add Bootloader (First 512 bytes ONLY)
 dd if=build/boot.bin of=build/disk.img conv=notrunc bs=512 count=1
 
-# 2.5 Add Loader (Sector 1 - 512 bytes)
-# This fits in the second half of the Ext2 Boot Block (bytes 512-1023)
+# 4. Add Loader (Sector 1 - 512 bytes)
 dd if=build/loader.bin of=build/disk.img conv=notrunc bs=512 count=15 seek=2000
 
-# 3. Add Kernel (Skip the Superblock!)
-# We seek to sector 2048 (1MB) to avoid overwriting FS metadata
+# 5. Add Kernel
 dd if=build/kernel.bin of=build/disk.img conv=notrunc bs=512 seek=2048
 
-# Run in QEMU
+# Run in QEMU with two disk images
 echo "Running in QEMU..."
-qemu-system-x86_64 -hda build/disk.img -vga std -serial stdio
+qemu-system-x86_64 -hda build/disk.img -drive file=build/rootfs.img,if=ide,index=1,media=disk,format=raw -vga std -serial stdio

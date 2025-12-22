@@ -4,7 +4,7 @@
 #include <ext4_blockdev.h>
 #include <ext4_errno.h>
 
-static fs::Ext2Disk disk_driver; // Static instance instead of pointer
+static fs::Ext2Disk disk_driver(1); // Initialize as slave drive (device 1)
 static struct ext4_blockdev blockdev;
 static struct ext4_blockdev_iface iface;
 
@@ -18,7 +18,10 @@ static int disk_close(struct ext4_blockdev *bdev) {
 }
 
 static int disk_read(struct ext4_blockdev *bdev, void *buf, uint64_t blk_id, uint32_t blk_cnt) {
-    uint64_t start_sector = blk_id;
+    // blk_id is logical block ID within the EXT4 filesystem
+    // Convert part_offset from bytes to 512-byte sectors
+    uint64_t part_offset_sectors = bdev->part_offset / 512;
+    uint64_t start_sector = part_offset_sectors + blk_id;
     uint32_t total_sectors_to_read = blk_cnt;
 
     uint8_t* buffer = (uint8_t*)buf;
@@ -29,7 +32,10 @@ static int disk_read(struct ext4_blockdev *bdev, void *buf, uint64_t blk_id, uin
 }
 
 static int disk_write(struct ext4_blockdev *bdev, const void *buf, uint64_t blk_id, uint32_t blk_cnt) {
-    uint64_t start_sector = blk_id;
+    // blk_id is logical block ID within the EXT4 filesystem
+    // Convert part_offset from bytes to 512-byte sectors
+    uint64_t part_offset_sectors = bdev->part_offset / 512;
+    uint64_t start_sector = part_offset_sectors + blk_id;
     uint32_t total_sectors_to_write = blk_cnt;
     
     const uint8_t* buffer = (const uint8_t*)buf;
@@ -53,11 +59,11 @@ struct ext4_blockdev* fs::get_lwext4_blockdev() {
     iface.bread = disk_read;
     iface.bwrite = disk_write;
     iface.ph_bsize = 512;
-    iface.ph_bcnt = 32768 * 2; // 32MB
+    iface.ph_bcnt = 28672 * 2; // 28MB in 512B blocks = 57344 blocks
 
     blockdev.bdif = &iface;
-    blockdev.part_offset = 0;
-    blockdev.part_size = 32768 * 1024;
+    blockdev.part_offset = 0; // Directly mount the image, no partition offset
+    blockdev.part_size = 28672 * 1024; // 28MB in bytes
     
     return &blockdev;
 }
