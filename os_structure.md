@@ -2,6 +2,14 @@
 
 This document outlines the structure of the Operating System, focusing on the Bootloader and the Kernel.
 
+## Architectural Concepts
+
+The OS follows a **monolithic** design where all services (filesystem, drivers, logic) run in the same address space (kernel mode). However, the build system enforces a **modular structure** by compiling subsystems into distinct static libraries.
+
+-   **Bootloader**: A two-stage assembly loader that escapes Real Mode and sets up a 32-bit Protected Mode environment.
+-   **Kernel Core**: The central C++ entry point that initializes the global system state (GDT, IDT, Memory).
+-   **Driver Abstraction**: Hardware specifics are encapsulated in classes (e.g., `VGA`, `Keyboard`), providing clean interfaces to the rest of the kernel.
+
 ## 1. Bootloader (`src/boot/boot.asm`)
 
 The bootloader is the first code executed by the BIOS. It is responsible for loading the rest of the operating system into memory and switching the CPU to the appropriate mode.

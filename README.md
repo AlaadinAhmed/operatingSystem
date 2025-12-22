@@ -31,3 +31,14 @@ Use the provided script to run in QEMU:
 ```bash
 ./run_iso.sh
 ```
+
+## Design Philosophy
+
+### Modern C++ on Bare Metal
+This OS demonstrates how to leverage C++ features (classes, inheritance, templates) in a freestanding environment. By stripping away the standard library and implementing a minimal runtime, we achieve high-level code organization with low-level hardware access.
+
+### Component-Based Monolith
+The kernel is built as a "static library monolith." Subsystems like the filesystem (`libfs`), drivers (`libdrivers`), and shell (`libshell`) are compiled as separate static libraries and linked together. This enforces modularity during development but results in a single, efficient binary at runtime.
+
+### Graphics-First Approach
+Instead of relying on the legacy VGA text mode (0xB8000), the bootloader sets up a VESA Linear Framebuffer immediately. This allows the kernel to own the entire rendering pipeline, using `stb_truetype` for high-quality text and `stb_image` for graphics, providing a modern visual experience from the first boot.
