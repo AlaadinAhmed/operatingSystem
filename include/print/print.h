@@ -1,5 +1,6 @@
 #pragma once
-#include <cstddef>
+#include <stdarg.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,7 +8,8 @@ extern "C" {
 
 void print(const char *str);
 void kprintf(const char *fmt, ...);
-void putchar(char c);
+void vkprintf(const char *fmt, va_list args);
+void k_putchar(char c);
 void ksprintf(char *buffer, const char *fmt, ...);
 
 #ifdef __cplusplus

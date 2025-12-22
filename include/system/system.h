@@ -24,16 +24,22 @@ public:
   void Shutdown();
   void Run();
   void ClearScreen(uint32_t color);
-  void RenderImage(int x, int y, const unsigned char* image_data, int img_width, int img_height);
+  void RenderImage(int x, int y, const unsigned char* image_data, int img_width, int img_height, int channels);
   void LoadImage(const char* filename, int x, int y, int& out_width, int& out_height);
 
 private:
   uint32_t *framebuffer ;
+  stbtt_fontinfo m_robotoFontInfo;
+  unsigned char* m_robotoFontBuffer;
+  stbtt_fontinfo m_bbhbogleFontInfo;
+  unsigned char* m_bbhbogleFontBuffer;
+
   void Update();
   void DrawText( int x, int y, const char* text, uint32_t color, float size, stbtt_fontinfo* font);
   void Render();
   void DrawRectangle(int x, int y, int width, int height, uint32_t color);
   void ProcessInput();
   void HandleEvents();
+  unsigned char* LoadFont(const char* font_path, stbtt_fontinfo* font_info);
 
 };

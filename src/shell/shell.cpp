@@ -68,16 +68,16 @@ void shell_main(bool fs_ready) {
             char c = kgetchar();
             if (c == '\n') {
                 cmd_buffer[buffer_pos] = '\0';
-                putchar('\n');
+                k_putchar('\n');
                 break;
             } else if (c == '\b') {
                 if (buffer_pos > 0) {
                     buffer_pos--;
-                    putchar('\b'); // Handle backspace on screen
+                    k_putchar('\b'); // Handle backspace on screen
                 }
             } else if (buffer_pos < MAX_CMD_LEN - 1) {
                 cmd_buffer[buffer_pos++] = c;
-                putchar(c); // Echo character back
+                k_putchar(c); // Echo character back
             }
         }
 

@@ -185,10 +185,19 @@ unsigned char* read_file_to_memory(const char* mount_point, const char* filename
     ext4_file file;
     int rc;
 
+    char full_path[256];
+    strcpy(full_path, mount_point);
+    int len = strlen(full_path);
+    if (len > 0 && full_path[len-1] != '/') {
+        full_path[len] = '/';
+        full_path[len+1] = '\0';
+    }
+    strcpy(full_path + strlen(full_path), filename);
+
     // Open the file
-    rc = ext4_fopen(&file, filename, "rb");
+    rc = ext4_fopen(&file, full_path, "rb");
     if (rc != EOK) {
-        kprintf("Error opening file %s: %d\n", filename, rc);
+        kprintf("Error opening file %s: %d\n", full_path, rc);
         return NULL;
     }
 

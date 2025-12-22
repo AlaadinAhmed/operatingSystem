@@ -63,10 +63,10 @@ loader_entry:
     mov al, 'K'
     out dx, al
 
-    ; 2. Read Superblock + GDT (4 sectors from LBA 2) to 0x1000
+    ; 2. Read Superblock + GDT (4 sectors from LBA 8194) to 0x1000
     mov ax, 4
     mov bx, 0x1000
-    mov ecx, 2
+    mov ecx, 8194
     call read_disk_lba
 
     ; Debug: FS Metadata loaded

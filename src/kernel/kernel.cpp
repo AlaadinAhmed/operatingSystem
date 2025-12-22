@@ -10,7 +10,14 @@
 #include <cstdint>
 #include <ext4.h>
 
+extern "C" void (*__init_array_start[])();
+extern "C" void (*__init_array_end[])();
+
 extern "C" void main() {
+  for (void (**func)() = __init_array_start; func != __init_array_end; func++) {
+      (*func)();
+  }
+
   System system;
   system.Initialize();
   system.Run();

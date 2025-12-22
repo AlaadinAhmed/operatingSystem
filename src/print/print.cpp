@@ -37,7 +37,7 @@ void write_serial(char a) {
    outb(0x3f8, a);
 }
 
-void putchar(char c) {
+void k_putchar(char c) {
   write_serial(c);
   vga_console_putc(c);
 }
@@ -50,17 +50,17 @@ void print(const char *str) {
       initialized = 1;
   }
   for (int i = 0; str[i] != '\0'; i++) {
-    putchar(str[i]);
+    k_putchar(str[i]);
   }
 }
 
 void print_dec(int num) {
   if (num == 0) {
-    putchar('0');
+    k_putchar('0');
     return;
   }
   if (num < 0) {
-    putchar('-');
+    k_putchar('-');
     num = -num;
   }
   char buffer[12];
@@ -70,7 +70,7 @@ void print_dec(int num) {
     num /= 10;
   }
   while (--i >= 0) {
-    putchar(buffer[i]);
+    k_putchar(buffer[i]);
   }
 }
 
@@ -79,7 +79,7 @@ void print_hex(unsigned int num) {
   char buffer[10];
   int i = 0;
   if (num == 0) {
-    putchar('0');
+    k_putchar('0');
     return;
   }
   while (num > 0) {
@@ -87,13 +87,11 @@ void print_hex(unsigned int num) {
     num /= 16;
   }
   while (--i >= 0) {
-    putchar(buffer[i]);
+    k_putchar(buffer[i]);
   }
 }
 
-void kprintf(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
+void vkprintf(const char *fmt, va_list args) {
   for (int i = 0; fmt[i] != '\0'; i++) {
     if (fmt[i] == '%') {
       i++;
@@ -105,17 +103,23 @@ void kprintf(const char *fmt, ...) {
         print(s);
       } else if (fmt[i] == 'c') {
         int val = va_arg(args, int);
-        putchar((char)val);
+        k_putchar((char)val);
       } else if (fmt[i] == 'x') {
         int val = va_arg(args, int);
         print_hex(val);
       } else {
-        putchar(fmt[i]);
+        k_putchar(fmt[i]);
       }
     } else {
-      putchar(fmt[i]);
+      k_putchar(fmt[i]);
     }
   }
+}
+
+void kprintf(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vkprintf(fmt, args);
   va_end(args);
 }
 

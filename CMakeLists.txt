@@ -59,9 +59,13 @@ target_include_directories(disk_lib PUBLIC include/disk)
 add_library(kernel_lib STATIC src/kernel/kernel.cpp src/kernel/utils.cpp src/system/system.cpp)
 target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include)
 
+# ext4_print_adapter Library (for printf redirect)
+add_library(ext4_print_adapter_lib STATIC src/kernel/ext4_print_adapter.cpp)
+target_include_directories(ext4_print_adapter_lib PUBLIC include/print)
+
 # Kernel Executable
 add_executable(kernel.elf src/boot/kernel_entry.asm)
-target_link_libraries(kernel.elf PRIVATE kernel_lib disk_lib print_lib shell_lib fs_lib drivers_lib lwext4_lib gcc)
+target_link_libraries(kernel.elf PRIVATE kernel_lib print_lib fs_lib disk_lib drivers_lib lwext4_lib ext4_print_adapter_lib gcc)
 target_include_directories(kernel.elf PRIVATE src/external)
 
 set_target_properties(kernel.elf PROPERTIES LINK_FLAGS "-m32 -nostdlib -T ${CMAKE_SOURCE_DIR}/linker.ld -no-pie -fno-pie")
