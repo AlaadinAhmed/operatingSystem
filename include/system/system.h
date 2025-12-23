@@ -33,6 +33,8 @@ private:
   unsigned char* m_robotoFontBuffer;
   stbtt_fontinfo m_bbhbogleFontInfo;
   unsigned char* m_bbhbogleFontBuffer;
+  stbtt_fontinfo m_jetBrainsFontInfo;
+  unsigned char* m_jetBrainsFontBuffer;
 
   void Update();
   void DrawText( int x, int y, const char* text, uint32_t color, float size, stbtt_fontinfo* font);

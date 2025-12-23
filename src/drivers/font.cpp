@@ -81,6 +81,19 @@ size_t my_strlen(const char* str) {
     return len;
 }
 
+#define STBTT_ifloor(x)   ((int)my_floor(x))
+#define STBTT_iceil(x)    ((int)my_ceil(x))
+#define STBTT_sqrt(x)     my_sqrt(x)
+#define STBTT_pow(x,y)    my_pow(x,y)
+#define STBTT_fmod(x,y)   my_fmod(x,y)
+#define STBTT_cos(x)      my_cos(x)
+#define STBTT_acos(x)     my_acos(x)
+#define STBTT_malloc(x,u) kmalloc(x)
+#define STBTT_free(x,u)   kfree(x)
+#define STBTT_strlen(x)   my_strlen(x)
+#define STBTT_memcpy      memcpy
+#define STBTT_memset      memset
+#define STBTT_assert(x)   ((void)0)
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"

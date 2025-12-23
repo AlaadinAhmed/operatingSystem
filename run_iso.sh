@@ -21,7 +21,7 @@ dd if=/dev/zero of=build/rootfs.img bs=1k count=28672
 /sbin/mke2fs -t ext4 -b 4096 -O ^64bit,^huge_file,^metadata_csum,^dir_nlink,^extra_isize,^orphan_file build/rootfs.img
 
 # Inject your BMP into the rootfs image
-echo -e "write logo.bmp logo.bmp\nwrite BBHBogle-Regular.ttf BBHBogle-Regular.ttf\nwrite Roboto-Regular.ttf Roboto-Regular.ttf" | /sbin/debugfs -w build/rootfs.img
+echo -e "write logo.bmp logo.bmp\nwrite BBHBogle-Regular.ttf BBHBogle-Regular.ttf\nwrite Roboto-Regular.ttf Roboto-Regular.ttf\nwrite JetBrainsMono-Bold.ttf JetBrainsMono-Bold.ttf\nwrite" | /sbin/debugfs -w build/rootfs.img
 
 # 3. Add Bootloader (First 512 bytes ONLY)
 dd if=build/boot.bin of=build/disk.img conv=notrunc bs=512 count=1

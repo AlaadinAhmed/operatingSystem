@@ -31,7 +31,7 @@ add_custom_command(
 file(GLOB LWEXT4_SOURCES "src/external/lwext4/src/*.c")
 list(REMOVE_ITEM LWEXT4_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/external/lwext4/src/ext4_mkfs.c")
 add_library(lwext4_lib STATIC ${LWEXT4_SOURCES})
-target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1)
+target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1 CONFIG_USE_DEFAULT_CFG=1)
 target_include_directories(lwext4_lib PUBLIC src/external/lwext4/include)
 
 # Drivers Library
@@ -88,3 +88,26 @@ add_custom_command(
 )
 
 add_custom_target(MyOS ALL DEPENDS os-image.bin)
+
+option(USE_GRUB "Build GRUB ISO" OFF)
+
+if(USE_GRUB)
+    find_program(GRUB_MKRESCUE grub-mkrescue)
+    find_program(XORRISO xorriso)
+    find_program(MFORMAT mformat)
+
+    if(GRUB_MKRESCUE AND XORRISO AND MFORMAT)
+        add_custom_command(
+            OUTPUT myos.iso
+            COMMAND mkdir -p iso/boot/grub
+            COMMAND cp kernel.elf iso/boot/kernel.elf
+            COMMAND cp ${CMAKE_SOURCE_DIR}/resources/grub.cfg iso/boot/grub/grub.cfg
+            COMMAND ${GRUB_MKRESCUE} -o myos.iso iso
+            DEPENDS kernel.elf
+            COMMENT "Creating GRUB ISO"
+        )
+        add_custom_target(iso ALL DEPENDS myos.iso)
+    else()
+        message(WARNING "Tools for GRUB ISO generation not found (grub-mkrescue, xorriso, mtools). 'make iso' will not be available.")
+    endif()
+endif()

@@ -97,11 +97,11 @@ void vga_draw_char(int x, int y, char c, uint32_t color, int scale) {
     return;
 
   uint32_t *buffer = vga_get_framebuffer();
-  const uint8_t *glyph = font8x8_basic[(int)c];
+  const uint16_t *glyph = font16x16_basic[(int)c];
 
-  for (int row = 0; row < 8; row++) {
-    for (int col = 0; col < 8; col++) {
-      if ((glyph[row] >> (7 - col)) & 1) {
+  for (int row = 0; row < 16; row++) {
+    for (int col = 0; col < 16; col++) {
+      if ((glyph[row] >> (15 - col)) & 1) {
         for (int sy = 0; sy < scale; sy++) {
           for (int sx = 0; sx < scale; sx++) {
             vga_draw_pixel(buffer, x + col * scale + sx, y + row * scale + sy,
@@ -123,22 +123,22 @@ void vga_console_putc(char c) {
     return;
   }
   if (c == '\b') {
-    if (console_x >= 16) {
-      console_x -= 16;
+    if (console_x >= 10) { // Approximate width
+      console_x -= 10;
       // Erase the character
       vga_draw_rectangle(vga_get_framebuffer(), console_x, console_y, 16, 16,
                          0x000000);
     } else if (console_y >= 16) {
       console_y -= 16;
-      console_x = get_width() - 16;
+      console_x = get_width() - 10;
       // Erase the character
       vga_draw_rectangle(vga_get_framebuffer(), console_x, console_y, 16, 16,
                          0x000000);
     }
     return;
   }
-  vga_draw_char(console_x, console_y, c, 0xFFFFFF, 2);
-  console_x += 16;
+  vga_draw_char(console_x, console_y, c, 0xFFFFFF, 1);
+  console_x += font16x16_width[(int)c] + 1;
   if (console_x >= get_width()) {
     console_x = 0;
     console_y += 16;
@@ -152,10 +152,10 @@ void vga_draw_string(int x, int y, const char *str, uint32_t color, int scale) {
   for (int i = 0; str[i] != '\0'; i++) {
     if (str[i] == '\n') {
       cursor_x = x;
-      cursor_y += 8;
+      cursor_y += 16 * scale;
       continue;
     }
     vga_draw_char(cursor_x, cursor_y, str[i], color, scale);
-    cursor_x += 8 * scale;
+    cursor_x += (font16x16_width[(int)str[i]] + 1) * scale;
   }
 }

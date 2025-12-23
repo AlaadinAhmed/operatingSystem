@@ -23,7 +23,7 @@ static int wait_disk_ready() {
     return 0;
 }
 
-void Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
+int Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
     // Select drive (Master/Slave) and LBA bits 24-27
     outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
     // Add a 400ns delay by reading the status port 4 times
@@ -31,7 +31,7 @@ void Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
 
     if (wait_disk_ready()) {
         kprintf("Disk Read Timeout (Ready)! LBA: %d\n", lba);
-        return;
+        return 1;
     }
     
     // Null byte to port 0x1F1 (Error/Features) - usually not needed but good practice
@@ -56,26 +56,68 @@ void Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
     while (!(inb(0x1F7) & 0x08)) {
         if (--timeout == 0) {
             kprintf("Disk Read Timeout! LBA: %d Status: %x\n", lba, inb(0x1F7));
-            return;
+            return 1;
         }
     }
 
     // Read 256 words (512 bytes)
-    for (int i = 0; i < 256; i++) {
-        uint16_t tmp;
-        asm volatile ("inw %1, %0" : "=a"(tmp) : "Nd"((uint16_t)0x1F0));
-        ((uint16_t*)buffer)[i] = tmp;
-    }
+    asm volatile ("rep insw" : "+D"(buffer) : "d"(0x1F0), "c"(256) : "memory");
+    return 0;
 }
 
-void Ext2Disk::write_sector(uint32_t lba, const uint8_t* buffer) {
+int Ext2Disk::read_sectors(uint32_t lba, uint8_t* buffer, uint32_t count) {
+    if (count == 0) return 0;
+    
+    // Handle large counts by splitting
+    while (count > 255) {
+         if (read_sectors(lba, buffer, 255)) return 1;
+         lba += 255;
+         buffer += 255 * 512;
+         count -= 255;
+    }
+
+    // Select drive (Master/Slave) and LBA bits 24-27
+    outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
+    // Add a 400ns delay
+    for(int k=0; k<1000; k++) inb(0x1F7);
+
+    if (wait_disk_ready()) {
+        kprintf("Disk Read Timeout (Ready)! LBA: %d\n", lba);
+        return 1;
+    }
+    
+    outb(0x1F1, 0x00);
+    outb(0x1F2, (uint8_t)count);
+    outb(0x1F3, (uint8_t)lba);
+    outb(0x1F4, (uint8_t)(lba >> 8));
+    outb(0x1F5, (uint8_t)(lba >> 16));
+    outb(0x1F7, 0x20); // Read Sectors
+
+    uint8_t* ptr = buffer;
+    for (uint32_t i = 0; i < count; i++) {
+        // Add a small delay before polling status for next sector
+        inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
+
+        int timeout = 1000000;
+        while (!(inb(0x1F7) & 0x08)) {
+            if (--timeout == 0) {
+                kprintf("Disk Read Timeout! LBA: %d\n", lba + i);
+                return 1;
+            }
+        }
+        asm volatile ("rep insw" : "+D"(ptr) : "d"(0x1F0), "c"(256) : "memory");
+    }
+    return 0;
+}
+
+int Ext2Disk::write_sector(uint32_t lba, const uint8_t* buffer) {
     outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
     // Add a 400ns delay
     inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
 
     if (wait_disk_ready()) {
         kprintf("Disk Write Timeout (Ready)! LBA: %d\n", lba);
-        return;
+        return 1;
     }
 
     outb(0x1F1, 0x00);
@@ -93,24 +135,23 @@ void Ext2Disk::write_sector(uint32_t lba, const uint8_t* buffer) {
         uint8_t status = inb(0x1F7);
         if (status & 0x01) {
              kprintf("Disk Write Error! LBA: %d Status: %x Error: %x\n", lba, status, inb(0x1F1));
-             return;
+             return 1;
         }
         if (--timeout == 0) {
             kprintf("Disk Write Timeout! LBA: %d Status: %x\n", lba, status);
-            return;
+            return 1;
         }
     }
 
-    for (int i = 0; i < 256; i++) {
-        uint16_t tmp = ((uint16_t*)buffer)[i];
-        asm volatile ("outw %0, %1" : : "a"(tmp), "Nd"((uint16_t)0x1F0));
-    }
+    asm volatile ("rep outsw" : : "S"(buffer), "d"(0x1F0), "c"(256) : "memory");
 
     // Wait for write to complete and check for errors
     outb(0x1F7, 0xE7); // Cache Flush (optional, but good for data integrity)
     if (wait_disk_ready()) {
          kprintf("Disk Write Timeout (Finish)! LBA: %d\n", lba);
+         return 1;
     }
+    return 0;
 }
 
 Ext2Disk::Ext2Disk(uint8_t drive_id) : m_drive_id(drive_id) {

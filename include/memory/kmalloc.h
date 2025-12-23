@@ -10,6 +10,7 @@ extern "C" {
 void* kmalloc(size_t size);
 void* krealloc(void* ptr, size_t size);
 void kfree(void* ptr);
+void init_memory();
 int abs(int x);
 
 // Declarations for utility functions implemented in utils.cpp

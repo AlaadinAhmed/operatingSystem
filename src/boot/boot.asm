@@ -22,12 +22,14 @@ main:
     ; Debug: Print Drive Number
     mov si, DRIVE_MSG
     call log_message
-    mov al, dl
+    mov al, [BOOT_DISK]
     shr al, 4
     call print_hex
     mov al, [BOOT_DISK]
     and al, 0x0F
     call print_hex
+    mov si, NEWLINE_STR
+    call log_message
 
     ; Read Loader using LBA Packet
     ; Check LBA Extensions
@@ -45,10 +47,8 @@ main:
     jc disk_error
 
     ; Debug: Loader Loaded
-    mov dx, 0xe9
-    mov al, 'L'
-    out dx, al
-
+    mov si, START_LOADER
+    call log_message
     ; Pass Boot Drive to Loader
     mov dl, [BOOT_DISK]
     
@@ -56,12 +56,10 @@ main:
     jmp 0x7E00
 
 disk_error:
-    mov dx, 0xe9
-    mov al, 'E'
-    out dx, al
-    mov ah, 0x0e
-    mov al, 'E'
-    int 0x10
+    mov si, DISK_ERROR_MSG
+    call log_message
+    mov si, DISK_ERROR_MSG
+    call print_message
     jmp $
 
 print_hex:
@@ -72,17 +70,26 @@ print_hex:
 .letter:
     add al, 'A' - 10
 .print:
-    mov dx, 0xe9
+    mov dx, 0x3f8
     out dx, al
     ret
 
 BOOT_DISK: db 0
 
+print_message:
+    lodsb
+    cmp al, 0
+    je .done
+    mov ah, 0x0e
+    int 0x10
+    jmp log_message
+.done:
+    ret
 log_message:
     lodsb
     cmp al, 0
     je .done
-    mov dx, 0xe9
+    mov dx, 0x3f8
     out dx, al
     jmp log_message
 .done:
@@ -99,6 +106,12 @@ dap:
 START_BOOT:
     db "Boot Started", ENDL
 DRIVE_MSG:
-    db "Boot Drive: 0x", ENDL
+    db "Boot Drive: 0x", 0
+NEWLINE_STR:
+    db ENDL
+START_LOADER:
+    db "Loader Loaded", ENDL
+DISK_ERROR_MSG:
+    db "Disk Read Error!", ENDL
 times 510 - ($ - $$) db 0
 db 0x55, 0xaa

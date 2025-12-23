@@ -226,7 +226,7 @@ Start_Protected_Mode:
     mov ss, ax
     mov fs, ax
     mov gs, ax
-    mov ebp, 0x900000
+    mov ebp, 0x1000000 ; 16MB
     mov esp, ebp
 
     ; Enable SSE

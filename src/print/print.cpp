@@ -1,53 +1,48 @@
 #include "print/print.h"
 #include "drivers/vga.h"
-#include <cstddef>
 #include <stdarg.h>
 #include <stdint.h>
 
 static int offset = 0;
 
 static inline void outb(uint16_t port, uint8_t val) {
-    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
+  asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
 }
 
 static inline uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    asm volatile ( "inb %1, %0"
-                   : "=a"(ret)
-                   : "Nd"(port) );
-    return ret;
+  uint8_t ret;
+  asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
+  return ret;
 }
 
 void init_serial() {
-   outb(0x3f8 + 1, 0x00);    // Disable all interrupts
-   outb(0x3f8 + 3, 0x80);    // Enable DLAB (set baud rate divisor)
-   outb(0x3f8 + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
-   outb(0x3f8 + 1, 0x00);    //                  (hi byte)
-   outb(0x3f8 + 3, 0x03);    // 8 bits, no parity, one stop bit
-   outb(0x3f8 + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
-   outb(0x3f8 + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+  outb(0x3f8 + 1, 0x00); // Disable all interrupts
+  outb(0x3f8 + 3, 0x80); // Enable DLAB (set baud rate divisor)
+  outb(0x3f8 + 0, 0x03); // Set divisor to 3 (lo byte) 38400 baud
+  outb(0x3f8 + 1, 0x00); //                  (hi byte)
+  outb(0x3f8 + 3, 0x03); // 8 bits, no parity, one stop bit
+  outb(0x3f8 + 2, 0xC7); // Enable FIFO, clear them, with 14-byte threshold
+  outb(0x3f8 + 4, 0x0B); // IRQs enabled, RTS/DSR set
 }
 
-int is_transmit_empty() {
-   return inb(0x3f8 + 5) & 0x20;
-}
+int is_transmit_empty() { return inb(0x3f8 + 5) & 0x20; }
 
 void write_serial(char a) {
-   // while (is_transmit_empty() == 0);
-   outb(0x3f8, a);
+  // while (is_transmit_empty() == 0);
+  outb(0x3f8, a);
 }
 
 void k_putchar(char c) {
   write_serial(c);
-  vga_console_putc(c);
+  // vga_console_putc(c);
 }
 
 void print(const char *str) {
   static int initialized = 0;
   if (!initialized) {
-      init_serial();
-      offset = 0; // Explicitly initialize offset to 0 at runtime
-      initialized = 1;
+    init_serial();
+    offset = 0; // Explicitly initialize offset to 0 at runtime
+    initialized = 1;
   }
   for (int i = 0; str[i] != '\0'; i++) {
     k_putchar(str[i]);
@@ -75,19 +70,11 @@ void print_dec(int num) {
 }
 
 void print_hex(unsigned int num) {
-  char hex[] = "0123456789ABCDEF";
-  char buffer[10];
-  int i = 0;
-  if (num == 0) {
-    k_putchar('0');
-    return;
-  }
-  while (num > 0) {
-    buffer[i++] = hex[num % 16];
-    num /= 16;
-  }
-  while (--i >= 0) {
-    k_putchar(buffer[i]);
+  const char *hex = "0123456789ABCDEF";
+  k_putchar('0');
+  k_putchar('x');
+  for (int i = 28; i >= 0; i -= 4) {
+    k_putchar(hex[(num >> i) & 0xF]);
   }
 }
 
@@ -152,7 +139,7 @@ void ksprintf(char *buffer, const char *fmt, ...) {
       } else if (fmt[i] == 's') {
         const char *s = va_arg(args, const char *);
         while (*s) {
-            buffer[buf_idx++] = *s++;
+          buffer[buf_idx++] = *s++;
         }
       } else if (fmt[i] == 'c') {
         int val = va_arg(args, int);

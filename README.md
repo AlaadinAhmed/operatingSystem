@@ -13,6 +13,8 @@ This project is a custom Operating System built from scratch, featuring a custom
 -   `src/kernel/`: Kernel source code.
 -   `src/drivers/`: Hardware drivers (VGA, Font, etc.).
 -   `src/fs/`: Filesystem adapters.
+-   `resources/`: Assets (Fonts, Images, GRUB config).
+-   `build/lib/`: Compiled static libraries.
 
 ## Documentation
 For a detailed overview of the OS structure and pseudocode, please refer to [os_structure.md](os_structure.md).

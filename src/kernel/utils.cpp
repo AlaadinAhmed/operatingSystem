@@ -46,19 +46,26 @@ void init_memory() {
 }
 
 void *kmalloc(size_t size) { // Renamed from malloc to kmalloc
-    // printf("kmalloc(%d)\n", size);
+    // kprintf("kmalloc(%d)\n", size);
+    // Direct VGA debug
+    // ((uint16_t*)0xB8000)[0] = 0x0F00 | 'K'; 
+    
     // Align to 8 bytes
     if (heap_offset % 8 != 0)
         heap_offset += 8 - (heap_offset % 8);
 
-    // Check for collision with stack (at 9MB)
-    if ((uint32_t)(heap_ptr + heap_offset + size) >= 0x900000) {
+    // Check for collision with stack (at 16MB)
+    if ((uint32_t)(heap_ptr + heap_offset + size) >= 0x1000000) {
         kprintf("kmalloc failed: OOM (Stack Collision)\n");
         return NULL;
     }
     void *ptr = heap_ptr + heap_offset;
     heap_offset += size;
-    // printf("kmalloc returning %x\n", (uint32_t)ptr);
+    
+    // Zero-initialize memory to prevent using garbage values
+    memset(ptr, 0, size);
+
+    kprintf("kmalloc(%d) -> %x\n", (int)size, (uint32_t)ptr);
     return ptr;
 }
 
@@ -96,8 +103,8 @@ void *kcalloc(size_t nmemb, size_t size) { // Renamed from calloc to kcalloc
     // printf("kcalloc(%d, %d)\n", nmemb, size);
     size_t total = nmemb * size;
     void *ptr = kmalloc(total);
-    if (ptr)
-        memset(ptr, 0, total);
+    // if (ptr)
+    //     memset(ptr, 0, total); // kmalloc now zeroes memory
     return ptr;
 }
 
@@ -195,6 +202,7 @@ unsigned char* read_file_to_memory(const char* mount_point, const char* filename
     strcpy(full_path + strlen(full_path), filename);
 
     // Open the file
+    kprintf("Opening %s\n", full_path);
     rc = ext4_fopen(&file, full_path, "rb");
     if (rc != EOK) {
         kprintf("Error opening file %s: %d\n", full_path, rc);
@@ -203,6 +211,7 @@ unsigned char* read_file_to_memory(const char* mount_point, const char* filename
 
     // Get file size
     uint64_t size = ext4_fsize(&file);
+    kprintf("File %s size: %d\n", filename, (uint32_t)size);
     if (size == 0) {
         kprintf("File %s is empty or size cannot be determined\n", filename);
         ext4_fclose(&file);
@@ -211,17 +220,20 @@ unsigned char* read_file_to_memory(const char* mount_point, const char* filename
 
     // Allocate buffer
     unsigned char* buffer = (unsigned char*)kmalloc(size);
+    kprintf("Allocated buffer at %x for %s\n", (uint32_t)buffer, filename);
     if (buffer == NULL) {
-        kprintf("Memory allocation failed for file %s (size: %u)\n", filename, (uint32_t)size);
+        kprintf("Memory allocation failed for file %s (size: %d)\n", filename, (uint32_t)size);
         ext4_fclose(&file);
         return NULL;
     }
 
     // Read file content
     size_t bytes_read;
+    kprintf("Reading file content...\n");
     rc = ext4_fread(&file, buffer, size, &bytes_read);
+    kprintf("Read finished. rc=%d, bytes=%d\n", rc, (uint32_t)bytes_read);
     if (rc != EOK || bytes_read != size) {
-        kprintf("Error reading file %s: %d, read %u of %u bytes\n", filename, rc, (uint32_t)bytes_read, (uint32_t)size);
+        kprintf("Error reading file %s: %d, read %d of %d bytes\n", filename, rc, (uint32_t)bytes_read, (uint32_t)size);
         kfree(buffer);
         ext4_fclose(&file);
         return NULL;

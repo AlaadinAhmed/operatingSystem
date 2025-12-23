@@ -11,6 +11,8 @@ void kprintf(const char *fmt, ...);
 void vkprintf(const char *fmt, va_list args);
 void k_putchar(char c);
 void ksprintf(char *buffer, const char *fmt, ...);
+void print_hex(unsigned int num);
+void print_dec(int num);
 
 #ifdef __cplusplus
 }

@@ -21,6 +21,8 @@ s_blocks_count
 *.swp
 *.swo
 *~
+.clangd
+*.bmp
 
 # OS Specific
 .DS_Store

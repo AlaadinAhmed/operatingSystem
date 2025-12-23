@@ -16,6 +16,8 @@ SECTIONS {
         __init_array_end = .;
     }
     .bss : {
+        __bss_start = .;
         *(.bss)
+        __bss_end = .;
     }
 }

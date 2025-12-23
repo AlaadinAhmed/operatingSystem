@@ -9,6 +9,8 @@ The OS follows a **monolithic** design where all services (filesystem, drivers, 
 -   **Bootloader**: A two-stage assembly loader that escapes Real Mode and sets up a 32-bit Protected Mode environment.
 -   **Kernel Core**: The central C++ entry point that initializes the global system state (GDT, IDT, Memory).
 -   **Driver Abstraction**: Hardware specifics are encapsulated in classes (e.g., `VGA`, `Keyboard`), providing clean interfaces to the rest of the kernel.
+-   **Resources**: Fonts and images are stored in `resources/` and injected into the root filesystem image during the build process.
+-   **Libraries**: Subsystems are compiled into static libraries stored in `build/lib/` before being linked into the final kernel.
 
 ## 1. Bootloader (`src/boot/boot.asm`)
 
