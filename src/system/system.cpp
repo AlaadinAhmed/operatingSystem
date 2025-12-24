@@ -2,6 +2,7 @@
 #include "drivers/vga.h"
 #include "stb_truetype.h" // The implementation is pulled in here.
 // #define STB_TRUETYPE_IMPLEMENTATION
+#include "drivers/mouse/mouse.h"
 #include "fs/lwext4_adapter.h" // For ext4_blockdev
 #include "memory/kmalloc.h"    // For read_file_to_memory, kfree
 #include "print/print.h"       // For kprintf
@@ -12,10 +13,16 @@
 
 #include "stb_image.h" // The implementation is pulled in here.
 
-System::System() : m_robotoFontBuffer(nullptr), m_bbhbogleFontBuffer(nullptr) {
+System::System() : m_robotoFontBuffer(nullptr), m_bbhbogleFontBuffer(nullptr),
+                   m_cursorX(-1), m_cursorY(-1), m_cursorDrawn(false) {
   // Clear the screen to black
   this->framebuffer = vga_get_framebuffer();
   vga_clear_buffer(this->framebuffer, 0x000000);
+  
+  // Initialize cursor background buffer
+  for (int i = 0; i < CURSOR_SIZE * CURSOR_SIZE; i++) {
+    m_cursorBackground[i] = 0x000000;
+  }
 }
 
 System::~System() {
@@ -28,7 +35,7 @@ System::~System() {
 }
 
 void System::Initialize() {
-  
+
   vga_clear_screen(0x000000); // Clear screen to black
 
   // Initialize and mount lwext4 filesystem
@@ -69,21 +76,41 @@ void System::Initialize() {
 
   int img_w, img_h;
   LoadImage("logo.bmp", 100, 100, img_w, img_h);
-  
-  // Explicitly clear top-left corner to remove any GRUB residual pixel
-  vga_draw_pixel(this->framebuffer, 0, 0, 0x000000);
+
+  // Initialize mouse driver
+  mouse_init(1.0f);
 }
 
 void System::Shutdown() {}
 
 void System::Run() {
-    bool running = true;
-    while (running) {
-        ProcessInput();
-        HandleEvents();
-        Update();
-        Render();
+  bool running = true;
+  while (running) {
+    ProcessInput();
+    HandleEvents();
+    Update();
+    
+    // Update mouse state
+    MouseState mouse = mouse_update();
+    
+    // Only update if cursor moved
+    if (mouse.x != m_cursorX || mouse.y != m_cursorY) {
+      // Restore previous background
+      if (m_cursorDrawn) {
+        RestoreCursorBackground();
+      }
+      
+      // Save new background and draw cursor
+      SaveCursorBackground(mouse.x, mouse.y);
+      DrawCursor(mouse.x, mouse.y);
+      
+      m_cursorX = mouse.x;
+      m_cursorY = mouse.y;
+      m_cursorDrawn = true;
     }
+    
+    Render();
+  }
 }
 
 void System::DrawText(int x, int y, const char *text, uint32_t color,
@@ -91,7 +118,8 @@ void System::DrawText(int x, int y, const char *text, uint32_t color,
   int cursor_x = x;
   int cursor_y = y;
   float scale = stbtt_ScaleForPixelHeight(font, size);
-  // kprintf("DrawText: x=%d y=%d text='%s' scale_x1000=%d\n", x, y, text, (int)(scale * 1000));
+  // kprintf("DrawText: x=%d y=%d text='%s' scale_x1000=%d\n", x, y, text,
+  // (int)(scale * 1000));
   while (*text) {
     char c = *text++;
     int ax;  // advance width
@@ -105,7 +133,7 @@ void System::DrawText(int x, int y, const char *text, uint32_t color,
     int bitmap_width, bitmap_height, x_off, y_off;
     unsigned char *bitmap = stbtt_GetCodepointBitmap(
         font, scale, scale, c, &bitmap_width, &bitmap_height, &x_off, &y_off);
-    
+
     // Skip if bitmap is null or invalid
     if (!bitmap || bitmap_width <= 0 || bitmap_height <= 0) {
       cursor_x += (ax * scale); // Still move cursor forward
@@ -118,9 +146,10 @@ void System::DrawText(int x, int y, const char *text, uint32_t color,
         if (opacity > 0) {
           int px = cursor_x + bx + x_off;
           int py = cursor_y + by + y_off;
-          
+
           // Skip pixels outside expected text region (prevent stray pixels)
-          if (px < x || py < 0 || px >= x + 2000 || py >= y + (int)size * 2) continue;
+          if (px < x || py < 0 || px >= x + 2000 || py >= y + (int)size * 2)
+            continue;
 
           uint8_t r = (color >> 16) & 0xFF;
           uint8_t g = (color >> 8) & 0xFF;
@@ -230,6 +259,36 @@ unsigned char *System::LoadFont(const char *font_path,
 void System::ProcessInput() {}
 
 void System::HandleEvents() {}
+
+void System::SaveCursorBackground(int x, int y) {
+  for (int i = 0; i < CURSOR_SIZE; i++) {
+    for (int j = 0; j < CURSOR_SIZE; j++) {
+      int px = x + j;
+      int py = y + i;
+      // Read pixel from framebuffer
+      uint16_t pitch = *(uint16_t *)(0x5200 + 16);
+      uint32_t offset = py * pitch + px * 4;
+      m_cursorBackground[i * CURSOR_SIZE + j] = *(uint32_t *)((char *)framebuffer + offset);
+    }
+  }
+}
+
+void System::RestoreCursorBackground() {
+  for (int i = 0; i < CURSOR_SIZE; i++) {
+    for (int j = 0; j < CURSOR_SIZE; j++) {
+      vga_draw_pixel(framebuffer, m_cursorX + j, m_cursorY + i, 
+                     m_cursorBackground[i * CURSOR_SIZE + j]);
+    }
+  }
+}
+
+void System::DrawCursor(int x, int y) {
+  for (int i = 0; i < CURSOR_SIZE; i++) {
+    for (int j = 0; j < CURSOR_SIZE; j++) {
+      vga_draw_pixel(this->framebuffer, x + j, y + i, 0xFFFFFF);
+    }
+  }
+}
 
 void System::Update() {}
 

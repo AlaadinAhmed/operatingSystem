@@ -35,7 +35,7 @@ target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1 CONFIG_USE
 target_include_directories(lwext4_lib PUBLIC src/external/lwext4/include)
 
 # Drivers Library
-add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp)
+add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp)
 target_include_directories(drivers_lib PUBLIC include/drivers src/external)
 
 # FS Library
