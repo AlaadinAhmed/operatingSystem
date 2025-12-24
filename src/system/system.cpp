@@ -28,15 +28,6 @@ System::~System() {
 }
 
 void System::Initialize() {
-  kprintf("System::Initialize()\n");
-  
-  uint32_t* fb = vga_get_framebuffer();
-  uint16_t w = *(uint16_t*)(0x5200 + 18);
-  uint16_t h = *(uint16_t*)(0x5200 + 20);
-  uint16_t p = *(uint16_t*)(0x5200 + 16);
-  uint8_t bpp = *(uint8_t*)(0x5200 + 25);
-  
-  kprintf("VGA Info: FB=%x W=%d H=%d Pitch=%d BPP=%d\n", (uint32_t)fb, w, h, p, bpp);
   
   vga_clear_screen(0x000000); // Clear screen to black
 
@@ -44,78 +35,43 @@ void System::Initialize() {
   struct ext4_blockdev *bdev = fs::get_lwext4_blockdev();
   int rc = ext4_device_register(bdev, "ext4_fs");
   if (rc != EOK) {
-    kprintf("Error registering ext4 device: %d\n", rc);
-    // Handle error, maybe panic or halt
+    return; // Failed to register ext4 device
   }
 
   rc = ext4_mount("ext4_fs", "/mp/", false); // Mount as read-write
   if (rc != EOK) {
-    kprintf("Error mounting ext4 filesystem: %d\n", rc);
-    // Handle error, maybe panic or halt
-  } else {
-    kprintf("Ext4 filesystem mounted at /mp/\n");
-    
-    // List files
-    ext4_dir dir;
-    kprintf("Opening /mp/ directory...\n");
-    rc = ext4_dir_open(&dir, "/mp/");
-    if (rc == EOK) {
-        kprintf("Listing /mp/:\n");
-        const ext4_direntry* de;
-        while ((de = ext4_dir_entry_next(&dir)) != NULL) {
-            k_putchar('E');
-            kprintf("  ");
-            for (int i = 0; i < de->name_length; i++) {
-                k_putchar((char)de->name[i]);
-            }
-            kprintf("\n");
-        }
-        ext4_dir_close(&dir);
-    } else {
-        kprintf("Failed to open /mp/: %d\n", rc);
-    }
+    return; // Failed to mount ext4 filesystem
   }
 
   // Load BBHBogle-Regular.ttf font
-  kprintf("Loading BBHBogle-Regular.ttf...\n");
   m_bbhbogleFontBuffer =
       System::LoadFont("BBHBogle-Regular.ttf", &m_bbhbogleFontInfo);
   if (m_bbhbogleFontBuffer) {
-    kprintf("BBHBogle loaded. Drawing text...\n");
     System::DrawText(50, 50, "Hello BBHBogle!", 0xFFFFFF, 50.0f,
                      &m_bbhbogleFontInfo);
-  } else {
-    kprintf("Failed to load BBHBogle-Regular.ttf\n");
   }
 
   // Load Roboto-Regular.ttf font
-  kprintf("Loading Roboto-Regular.ttf...\n");
   m_robotoFontBuffer =
       System::LoadFont("Roboto-Regular.ttf", &m_robotoFontInfo);
   if (m_robotoFontBuffer) {
-    kprintf("Roboto loaded. Drawing text...\n");
     System::DrawText(50, 150, "Hello Roboto!", 0xFFFFFF, 50.0f,
                      &m_robotoFontInfo);
-  } else {
-    kprintf("Failed to load Roboto-Regular.ttf\n");
   }
 
-  // Example of drawing with one of the fonts
-  kprintf("Loading JetBrainsMono-Bold.ttf...\n");
+  // Load JetBrainsMono-Bold.ttf font
   m_jetBrainsFontBuffer =
       System::LoadFont("JetBrainsMono-Bold.ttf", &m_jetBrainsFontInfo);
   if (m_jetBrainsFontBuffer) {
-    kprintf("JetBrains loaded. Drawing text...\n");
     System::DrawText(200, 200, "Hello, World!", 0xFFFFFF, 50.0f,
                      &m_jetBrainsFontInfo);
-  } else {
-    kprintf("BBHBogle font not available for 'Hello, World!'\n");
   }
 
   int img_w, img_h;
-  kprintf("Loading logo.bmp...\n");
   LoadImage("logo.bmp", 100, 100, img_w, img_h);
-  kprintf("System::Initialize() done.\n");
+  
+  // Explicitly clear top-left corner to remove any GRUB residual pixel
+  vga_draw_pixel(this->framebuffer, 0, 0, 0x000000);
 }
 
 void System::Shutdown() {}
@@ -150,13 +106,22 @@ void System::DrawText(int x, int y, const char *text, uint32_t color,
     unsigned char *bitmap = stbtt_GetCodepointBitmap(
         font, scale, scale, c, &bitmap_width, &bitmap_height, &x_off, &y_off);
     
-    // kprintf("Char '%c': w=%d h=%d xoff=%d yoff=%d\n", c, bitmap_width, bitmap_height, x_off, y_off);
+    // Skip if bitmap is null or invalid
+    if (!bitmap || bitmap_width <= 0 || bitmap_height <= 0) {
+      cursor_x += (ax * scale); // Still move cursor forward
+      continue;
+    }
 
     for (int by = 0; by < bitmap_height; by++) {
       for (int bx = 0; bx < bitmap_width; bx++) {
         unsigned char opacity = bitmap[by * bitmap_width + bx];
         if (opacity > 0) {
-          uint32_t final_color = 0;
+          int px = cursor_x + bx + x_off;
+          int py = cursor_y + by + y_off;
+          
+          // Skip pixels outside expected text region (prevent stray pixels)
+          if (px < x || py < 0 || px >= x + 2000 || py >= y + (int)size * 2) continue;
+
           uint8_t r = (color >> 16) & 0xFF;
           uint8_t g = (color >> 8) & 0xFF;
           uint8_t b = color & 0xFF;
@@ -165,12 +130,8 @@ void System::DrawText(int x, int y, const char *text, uint32_t color,
           g = (g * opacity) / 255;
           b = (b * opacity) / 255;
 
-          final_color = (r << 16) | (g << 8) | b;
-
-          vga_draw_pixel(this->framebuffer, cursor_x + bx + x_off,
-                         cursor_y + by + y_off, final_color);
-          // if (bx == bitmap_width/2 && by == bitmap_height/2) 
-          //    kprintf("Pixel: x=%d y=%d color=%x\n", cursor_x + bx + x_off, cursor_y + by + y_off, final_color);
+          uint32_t final_color = (r << 16) | (g << 8) | b;
+          vga_draw_pixel(this->framebuffer, px, py, final_color);
         }
       }
     }
@@ -252,23 +213,17 @@ void System::LoadImage(const char *filename, int x, int y, int &out_width,
 unsigned char *System::LoadFont(const char *font_path,
                                 stbtt_fontinfo *font_info) {
   size_t file_size;
-  kprintf("LoadFont: Reading file %s\n", font_path);
   unsigned char *font_buffer =
       read_file_to_memory("/mp/", font_path, &file_size);
   if (font_buffer == NULL) {
-    kprintf("Failed to read font file: %s\n", font_path);
     return NULL;
   }
 
-  kprintf("LoadFont: Getting offset\n");
   int offset = stbtt_GetFontOffsetForIndex(font_buffer, 0);
-  kprintf("LoadFont: InitFont (offset=%d)\n", offset);
   if (!stbtt_InitFont(font_info, font_buffer, offset)) {
-    kprintf("Failed to initialize font: %s\n", font_path);
     kfree(font_buffer); // Free if initialization fails
     return NULL;
   }
-  kprintf("LoadFont: Success\n");
   return font_buffer; // Return the buffer, caller is responsible for kfree'ing
 }
 

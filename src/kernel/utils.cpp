@@ -65,7 +65,6 @@ void *kmalloc(size_t size) { // Renamed from malloc to kmalloc
     // Zero-initialize memory to prevent using garbage values
     memset(ptr, 0, size);
 
-    kprintf("kmalloc(%d) -> %x\n", (int)size, (uint32_t)ptr);
     return ptr;
 }
 
@@ -202,36 +201,28 @@ unsigned char* read_file_to_memory(const char* mount_point, const char* filename
     strcpy(full_path + strlen(full_path), filename);
 
     // Open the file
-    kprintf("Opening %s\n", full_path);
     rc = ext4_fopen(&file, full_path, "rb");
     if (rc != EOK) {
-        kprintf("Error opening file %s: %d\n", full_path, rc);
         return NULL;
     }
 
     // Get file size
     uint64_t size = ext4_fsize(&file);
-    kprintf("File %s size: %d\n", filename, (uint32_t)size);
     if (size == 0) {
-        kprintf("File %s is empty or size cannot be determined\n", filename);
         ext4_fclose(&file);
         return NULL;
     }
 
     // Allocate buffer
     unsigned char* buffer = (unsigned char*)kmalloc(size);
-    kprintf("Allocated buffer at %x for %s\n", (uint32_t)buffer, filename);
     if (buffer == NULL) {
-        kprintf("Memory allocation failed for file %s (size: %d)\n", filename, (uint32_t)size);
         ext4_fclose(&file);
         return NULL;
     }
 
     // Read file content
     size_t bytes_read;
-    kprintf("Reading file content...\n");
     rc = ext4_fread(&file, buffer, size, &bytes_read);
-    kprintf("Read finished. rc=%d, bytes=%d\n", rc, (uint32_t)bytes_read);
     if (rc != EOK || bytes_read != size) {
         kprintf("Error reading file %s: %d, read %d of %d bytes\n", filename, rc, (uint32_t)bytes_read, (uint32_t)size);
         kfree(buffer);

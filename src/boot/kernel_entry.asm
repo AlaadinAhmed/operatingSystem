@@ -19,7 +19,7 @@ _start:
     dd -(0x1BADB002 + 0x00000007) ; Checksum
     dd 0, 0, 0, 0, 0            ; Unused
     dd 0                        ; Linear graphics
-    dd 1024, 768, 32            ; Width, Height, Depth
+    dd 1920, 1080, 32           ; Width, Height, Depth
 
 entry_code:
     ; Save Multiboot registers immediately
@@ -39,8 +39,13 @@ entry_code:
     cmp esi, 0x2BADB002
     jne .custom_loader_setup
 
-    ; GRUB detected. Copy VBE info to 0x5200.
+    ; GRUB detected. First clear VBE info area, then copy.
     mov edi, 0x5200
+    mov ecx, 256        ; Clear 256 bytes (VBE mode info block size)
+    xor eax, eax
+    rep stosb           ; Fill with zeros
+    
+    mov edi, 0x5200     ; Reset EDI
     
     ; Get vbe_mode_info pointer (Multiboot offset 76 / 0x4C)
     mov ebx, edx ; Restore EBX for addressing

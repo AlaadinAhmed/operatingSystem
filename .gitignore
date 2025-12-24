@@ -6,12 +6,20 @@ cmake_install.cmake
 compile_commands.json
 Makefile
 
+# IDE/Editor cache
+.cache/
+.clangd
+
 # Binaries
 *.bin
 *.elf
 *.o
 *.a
 *.so
+
+# Disk and ISO images
+*.img
+*.iso
 
 # Logs
 *.log
@@ -21,7 +29,6 @@ s_blocks_count
 *.swp
 *.swo
 *~
-.clangd
 *.bmp
 
 # OS Specific
