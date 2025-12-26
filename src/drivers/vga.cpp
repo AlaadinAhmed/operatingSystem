@@ -1,16 +1,61 @@
 #include "drivers/vga.h"
 #include "drivers/font_data.h"
+#include "print/print.h"
 #include <cstdint>
 
 // VBE Mode Info Block is at 0x5200
 #define VBE_MODE_INFO 0x5200
 
-// Public function to get the hardware framebuffer address
-uint32_t *vga_get_framebuffer() { return *(uint32_t **)(VBE_MODE_INFO + 40); }
+// For EFI boot, we store the 64-bit framebuffer address here
+extern "C" {
+    uint64_t g_efi_framebuffer = 0;
+    uint32_t g_efi_width = 0;
+    uint32_t g_efi_height = 0;
+    uint32_t g_efi_pitch = 0;
+}
 
-static uint16_t get_pitch() { return *(uint16_t *)(VBE_MODE_INFO + 16); }
-static uint16_t get_width() { return *(uint16_t *)(VBE_MODE_INFO + 18); }
-static uint16_t get_height() { return *(uint16_t *)(VBE_MODE_INFO + 20); }
+
+// Public function to get the hardware framebuffer address
+// Supports both legacy VBE (32-bit) and EFI (64-bit) framebuffer addresses
+uint32_t *vga_get_framebuffer() { 
+    // Check if EFI framebuffer is set (non-zero)
+    if (g_efi_framebuffer != 0) {
+        return (uint32_t*)(uintptr_t)g_efi_framebuffer;
+    }
+    // Fall back to legacy VBE mode info
+    return *(uint32_t **)(VBE_MODE_INFO + 40); 
+}
+
+static uint16_t get_pitch() { 
+    if (g_efi_pitch != 0) {
+        return g_efi_pitch * 4; // Convert pixels to bytes
+    }
+    return *(uint16_t *)(VBE_MODE_INFO + 16); 
+}
+
+static uint16_t get_width() { 
+    if (g_efi_width != 0) {
+        return g_efi_width;
+    }
+    return *(uint16_t *)(VBE_MODE_INFO + 18); 
+}
+
+static uint16_t get_height() { 
+    if (g_efi_height != 0) {
+        return g_efi_height;
+    }
+    return *(uint16_t *)(VBE_MODE_INFO + 20); 
+}
+
+// Helper to get font data. 
+// We include the data here to ensure it's available to this translation unit.
+// The font_data.h defines 'font16x16_basic' as static const.
+// By wrapping it in a function, we hope to fix addressing.
+const uint16_t* get_font_glyph(unsigned char c) {
+    if (c < 32 || c > 127) return font16x16_basic[0];
+    return font16x16_basic[c];
+}
+
 
 // --- Buffer-based drawing functions ---
 
@@ -93,15 +138,41 @@ void vga_clear_screen(uint32_t color) {
 void fast_clear() { fast_clear_buffer(vga_get_framebuffer()); }
 
 void vga_draw_char(int x, int y, char c, uint32_t color, int scale) {
-  if (c < 0 || c > 127)
+  uint32_t *buffer = vga_get_framebuffer();
+  
+  // Skip invalid characters
+  unsigned char uc = (unsigned char)c;
+  if (uc < 32 || uc > 126)
     return;
 
-  uint32_t *buffer = vga_get_framebuffer();
-  const uint16_t *glyph = font16x16_basic[(int)c];
+  // Use helper function to get glyph data
+  // This avoids global data relocation issues
+  const uint16_t* glyph = get_font_glyph(uc);
+  
+  // Check if glyph has any data
+  bool hasData = false;
+  for(int i=0; i<16; i++) {
+      if(glyph[i] != 0) {
+          hasData = true;
+          break;
+      }
+  }
 
+  if (!hasData) {
+      // Draw BLUE box for empty/invalid glyph data
+      for(int i=0; i<16; i++) {
+          for(int j=0; j<16; j++) {
+              vga_draw_pixel(buffer, x+j, y+i, 0x0000FF);
+          }
+      }
+      return;
+  }
+
+  // Draw character normally
   for (int row = 0; row < 16; row++) {
+    uint16_t rowData = glyph[row];
     for (int col = 0; col < 16; col++) {
-      if ((glyph[row] >> (15 - col)) & 1) {
+      if ((rowData >> (15 - col)) & 1) {
         for (int sy = 0; sy < scale; sy++) {
           for (int sx = 0; sx < scale; sx++) {
             vga_draw_pixel(buffer, x + col * scale + sx, y + row * scale + sy,
@@ -159,3 +230,137 @@ void vga_draw_string(int x, int y, const char *str, uint32_t color, int scale) {
     cursor_x += (font16x16_width[(int)str[i]] + 1) * scale;
   }
 }
+
+void vga_draw_digit(int x, int y, int digit, uint32_t color, int scale) {
+    if (digit < 0 || digit > 9) return;
+    
+    // 5x7 bitmaps for digits 0-9 (using 3 bits width for simplicity: 0-7)
+    // 0x7 = 111, 0x5 = 101, 0x2 = 010, etc.
+    // Local array to avoid relocation issues
+    uint8_t bitmap[7];
+    
+    switch(digit) {
+        case 0: bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+        case 1: bitmap[0]=2; bitmap[1]=6; bitmap[2]=2; bitmap[3]=2; bitmap[4]=2; bitmap[5]=2; bitmap[6]=7; break;
+        case 2: bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=7; bitmap[4]=4; bitmap[5]=4; bitmap[6]=7; break;
+        case 3: bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=7; break;
+        case 4: bitmap[0]=5; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=1; break;
+        case 5: bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=7; break;
+        case 6: bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=7; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+        case 7: bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=1; bitmap[4]=1; bitmap[5]=1; bitmap[6]=1; break;
+        case 8: bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+        case 9: bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=7; break;
+    }
+
+    uint32_t *buffer = vga_get_framebuffer();
+    
+    for (int row = 0; row < 7; row++) {
+        uint8_t rowData = bitmap[row];
+        for (int col = 0; col < 3; col++) { 
+            if ((rowData >> (2 - col)) & 1) {
+                // Draw 4x4 pixel blocks for visibility
+                for (int sy = 0; sy < 4*scale; sy++) {
+                    for (int sx = 0; sx < 4*scale; sx++) {
+                        vga_draw_pixel(buffer, x + col * 4*scale + sx, y + row * 4*scale + sy, color);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Simple hardcoded 5x7 font for debugging - bypasses all relocation issues
+void vga_draw_char_simple(int x, int y, char c, uint32_t color, int scale) {
+    uint8_t bitmap[7] = {0};
+    
+    // Only handle printable ASCII (space to ~)
+    if (c >= '0' && c <= '9') {
+        // Reuse digit logic
+        switch(c) {
+            case '0': bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+            case '1': bitmap[0]=2; bitmap[1]=6; bitmap[2]=2; bitmap[3]=2; bitmap[4]=2; bitmap[5]=2; bitmap[6]=7; break;
+            case '2': bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=7; bitmap[4]=4; bitmap[5]=4; bitmap[6]=7; break;
+            case '3': bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=7; break;
+            case '4': bitmap[0]=5; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=1; break;
+            case '5': bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=7; break;
+            case '6': bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=7; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+            case '7': bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=1; bitmap[4]=1; bitmap[5]=1; bitmap[6]=1; break;
+            case '8': bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+            case '9': bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=7; break;
+        }
+    } else if (c >= 'A' && c <= 'Z') {
+        switch(c) {
+            case 'A': bitmap[0]=2; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=5; bitmap[5]=5; bitmap[6]=5; break;
+            case 'B': bitmap[0]=6; bitmap[1]=5; bitmap[2]=5; bitmap[3]=6; bitmap[4]=5; bitmap[5]=5; bitmap[6]=6; break;
+            case 'C': bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=4; bitmap[4]=4; bitmap[5]=4; bitmap[6]=7; break;
+            case 'D': bitmap[0]=6; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=5; bitmap[5]=5; bitmap[6]=6; break;
+            case 'E': bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=6; bitmap[4]=4; bitmap[5]=4; bitmap[6]=7; break;
+            case 'F': bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=6; bitmap[4]=4; bitmap[5]=4; bitmap[6]=4; break;
+            case 'G': bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=4; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+            case 'H': bitmap[0]=5; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=5; bitmap[5]=5; bitmap[6]=5; break;
+            case 'I': bitmap[0]=7; bitmap[1]=2; bitmap[2]=2; bitmap[3]=2; bitmap[4]=2; bitmap[5]=2; bitmap[6]=7; break;
+            case 'J': bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=1; bitmap[4]=1; bitmap[5]=5; bitmap[6]=7; break;
+            case 'K': bitmap[0]=5; bitmap[1]=5; bitmap[2]=6; bitmap[3]=4; bitmap[4]=6; bitmap[5]=5; bitmap[6]=5; break;
+            case 'L': bitmap[0]=4; bitmap[1]=4; bitmap[2]=4; bitmap[3]=4; bitmap[4]=4; bitmap[5]=4; bitmap[6]=7; break;
+            case 'M': bitmap[0]=5; bitmap[1]=7; bitmap[2]=7; bitmap[3]=5; bitmap[4]=5; bitmap[5]=5; bitmap[6]=5; break;
+            case 'N': bitmap[0]=5; bitmap[1]=5; bitmap[2]=7; bitmap[3]=7; bitmap[4]=7; bitmap[5]=5; bitmap[6]=5; break;
+            case 'O': bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+            case 'P': bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=7; bitmap[4]=4; bitmap[5]=4; bitmap[6]=4; break;
+            case 'Q': bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=5; bitmap[5]=7; bitmap[6]=3; break;
+            case 'R': bitmap[0]=7; bitmap[1]=5; bitmap[2]=5; bitmap[3]=6; bitmap[4]=5; bitmap[5]=5; bitmap[6]=5; break;
+            case 'S': bitmap[0]=7; bitmap[1]=4; bitmap[2]=4; bitmap[3]=7; bitmap[4]=1; bitmap[5]=1; bitmap[6]=7; break;
+            case 'T': bitmap[0]=7; bitmap[1]=2; bitmap[2]=2; bitmap[3]=2; bitmap[4]=2; bitmap[5]=2; bitmap[6]=2; break;
+            case 'U': bitmap[0]=5; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=5; bitmap[5]=5; bitmap[6]=7; break;
+            case 'V': bitmap[0]=5; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=5; bitmap[5]=2; bitmap[6]=2; break;
+            case 'W': bitmap[0]=5; bitmap[1]=5; bitmap[2]=5; bitmap[3]=5; bitmap[4]=7; bitmap[5]=7; bitmap[6]=5; break;
+            case 'X': bitmap[0]=5; bitmap[1]=5; bitmap[2]=2; bitmap[3]=2; bitmap[4]=2; bitmap[5]=5; bitmap[6]=5; break;
+            case 'Y': bitmap[0]=5; bitmap[1]=5; bitmap[2]=5; bitmap[3]=2; bitmap[4]=2; bitmap[5]=2; bitmap[6]=2; break;
+            case 'Z': bitmap[0]=7; bitmap[1]=1; bitmap[2]=1; bitmap[3]=2; bitmap[4]=4; bitmap[5]=4; bitmap[6]=7; break;
+        }
+    } else if (c >= 'a' && c <= 'z') {
+        // Lowercase - use uppercase bitmaps
+        return vga_draw_char_simple(x, y, c - 32, color, scale);
+    } else {
+        // Special chars
+        switch(c) {
+            case ' ': return; // Space - just advance
+            case '/': bitmap[0]=1; bitmap[1]=1; bitmap[2]=2; bitmap[3]=2; bitmap[4]=2; bitmap[5]=4; bitmap[6]=4; break;
+            case '.': bitmap[0]=0; bitmap[1]=0; bitmap[2]=0; bitmap[3]=0; bitmap[4]=0; bitmap[5]=0; bitmap[6]=2; break;
+            case ':': bitmap[0]=0; bitmap[1]=2; bitmap[2]=0; bitmap[3]=0; bitmap[4]=0; bitmap[5]=2; bitmap[6]=0; break;
+            case '-': bitmap[0]=0; bitmap[1]=0; bitmap[2]=0; bitmap[3]=7; bitmap[4]=0; bitmap[5]=0; bitmap[6]=0; break;
+            case '_': bitmap[0]=0; bitmap[1]=0; bitmap[2]=0; bitmap[3]=0; bitmap[4]=0; bitmap[5]=0; bitmap[6]=7; break;
+            case '!': bitmap[0]=2; bitmap[1]=2; bitmap[2]=2; bitmap[3]=2; bitmap[4]=2; bitmap[5]=0; bitmap[6]=2; break;
+            case '?': bitmap[0]=6; bitmap[1]=1; bitmap[2]=1; bitmap[3]=2; bitmap[4]=2; bitmap[5]=0; bitmap[6]=2; break;
+            case '=': bitmap[0]=0; bitmap[1]=7; bitmap[2]=0; bitmap[3]=7; bitmap[4]=0; bitmap[5]=0; bitmap[6]=0; break;
+            default: return; // Unknown char
+        }
+    }
+    
+    uint32_t *buffer = vga_get_framebuffer();
+    for (int row = 0; row < 7; row++) {
+        uint8_t rowData = bitmap[row];
+        for (int col = 0; col < 3; col++) { 
+            if ((rowData >> (2 - col)) & 1) {
+                for (int sy = 0; sy < 2*scale; sy++) {
+                    for (int sx = 0; sx < 2*scale; sx++) {
+                        vga_draw_pixel(buffer, x + col * 2*scale + sx, y + row * 2*scale + sy, color);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void vga_draw_string_simple(int x, int y, const char *str, uint32_t color, int scale) {
+    int cursor_x = x;
+    for (int i = 0; str[i] != '\0'; i++) {
+        if (str[i] == '\n') {
+            cursor_x = x;
+            y += 16 * scale;
+            continue;
+        }
+        vga_draw_char_simple(cursor_x, y, str[i], color, scale);
+        cursor_x += 8 * scale; // Fixed width
+    }
+}
+

@@ -86,9 +86,12 @@ class Ext2Disk {
 public:
   Ext2Disk(uint8_t drive_id);
   void mount();
+  bool detect_partition();
   int read_sector(uint32_t lba, uint8_t* buffer);
   int read_sectors(uint32_t lba, uint8_t* buffer, uint32_t count);
   int write_sector(uint32_t lba, const uint8_t* buffer);
   uint8_t m_drive_id;
+  uint64_t m_partition_offset;
+  uint64_t m_partition_size;
 };
 } // namespace fs

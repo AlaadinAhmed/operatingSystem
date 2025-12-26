@@ -4,9 +4,13 @@
 #include "memory/kmalloc.h" // Include kmalloc.h for declarations
 #include "fs/lwext4_adapter.h" // For ext4_blockdev
 #include <ext4.h> // For ext4_fopen, ext4_fsize, ext4_fread, ext4_fclose, EOK
+#include "drivers/vga.h" // For debug checkpoints
 
 
 extern "C" {
+
+// For EFI builds, gnu-efi provides these functions
+#ifndef __EFI__
 
 void *memset(void *s, int c, size_t n) noexcept {
     unsigned char *p = (unsigned char *)s;
@@ -35,65 +39,173 @@ int memcmp(const void *s1, const void *s2, size_t n) {
     return 0;
 }
 
-// Simple bump allocator
-// static uint8_t heap[1024 * 1024 * 4]; // 4MB heap
-static uint8_t* heap_ptr = (uint8_t*)0x200000; // Start heap at 2MB
-static size_t heap_offset = 0;
+#endif /* __EFI__ */
 
-void init_memory() {
-    heap_offset = 0;
-    // memset(heap, 0, sizeof(heap)); // Don't clear 4MB, too slow and unnecessary
+// ============================================================================
+// Simple Free-List Memory Allocator
+// ============================================================================
+// Each block has a header containing size and free status.
+// Free blocks are linked together in a free list.
+// ============================================================================
+
+struct BlockHeader {
+    size_t size;      // Size of the data portion (not including header)
+    bool is_free;     // Whether this block is free
+    BlockHeader* next; // Next block in memory (for coalescing)
+};
+
+static const size_t HEADER_SIZE = sizeof(BlockHeader);
+static const size_t MIN_BLOCK_SIZE = 16; // Minimum allocation size
+static const size_t HEAP_START = 0x200000;  // 2MB
+static const size_t HEAP_END = 0x1000000;   // 16MB (stack starts here)
+
+static BlockHeader* heap_start = nullptr;
+static bool heap_initialized = false;
+
+// Align size to 8 bytes
+static inline size_t align8(size_t size) {
+    return (size + 7) & ~7;
 }
 
-void *kmalloc(size_t size) { // Renamed from malloc to kmalloc
-    // kprintf("kmalloc(%d)\n", size);
-    // Direct VGA debug
-    // ((uint16_t*)0xB8000)[0] = 0x0F00 | 'K'; 
+void init_memory() {
+    if (heap_initialized) return;
     
-    // Align to 8 bytes
-    if (heap_offset % 8 != 0)
-        heap_offset += 8 - (heap_offset % 8);
+    // Initialize the heap with one big free block
+    heap_start = (BlockHeader*)HEAP_START;
+    heap_start->size = (HEAP_END - HEAP_START) - HEADER_SIZE;
+    heap_start->is_free = true;
+    heap_start->next = nullptr;
+    heap_initialized = true;
+}
 
-    // Check for collision with stack (at 16MB)
-    if ((uint32_t)(heap_ptr + heap_offset + size) >= 0x1000000) {
-        kprintf("kmalloc failed: OOM (Stack Collision)\n");
-        return NULL;
+// Find a free block that fits the requested size
+static BlockHeader* find_free_block(size_t size) {
+    BlockHeader* current = heap_start;
+    while (current != nullptr) {
+        if (current->is_free && current->size >= size) {
+            return current;
+        }
+        current = current->next;
     }
-    void *ptr = heap_ptr + heap_offset;
-    heap_offset += size;
-    
-    // Zero-initialize memory to prevent using garbage values
-    memset(ptr, 0, size);
+    return nullptr;
+}
 
+// Split a block if it's significantly larger than needed
+static void split_block(BlockHeader* block, size_t size) {
+    // Check if there's enough space to split (avoid underflow)
+    size_t min_split_size = size + HEADER_SIZE + MIN_BLOCK_SIZE;
+    if (block->size < min_split_size) {
+        return; // Block is too small to split
+    }
+    
+    size_t remaining = block->size - size;
+    BlockHeader* new_block = (BlockHeader*)((uint8_t*)block + HEADER_SIZE + size);
+    new_block->size = remaining - HEADER_SIZE;
+    new_block->is_free = true;
+    new_block->next = block->next;
+    
+    block->size = size;
+    block->next = new_block;
+}
+
+// Coalesce adjacent free blocks
+static void coalesce() {
+    BlockHeader* current = heap_start;
+    while (current != nullptr && current->next != nullptr) {
+        if (current->is_free && current->next->is_free) {
+            // Merge with next block
+            current->size += HEADER_SIZE + current->next->size;
+            current->next = current->next->next;
+            // Don't advance - check if we can merge more
+        } else {
+            current = current->next;
+        }
+    }
+}
+
+void *kmalloc(size_t size) {
+    if (size == 0) return nullptr;
+    
+    // Ensure heap is initialized
+    if (!heap_initialized) {
+        init_memory();
+    }
+    
+    // Align size
+    size = align8(size);
+    if (size < MIN_BLOCK_SIZE) size = MIN_BLOCK_SIZE;
+    
+    // Find a free block
+    BlockHeader* block = find_free_block(size);
+    if (block == nullptr) {
+        // Try coalescing and searching again
+        coalesce();
+        block = find_free_block(size);
+        if (block == nullptr) {
+            kprintf("kmalloc failed: OOM (Stack Collision)\n");
+            return nullptr;
+        }
+    }
+    
+    // Split if the block is too large
+    split_block(block, size);
+    
+    // Mark as used
+    block->is_free = false;
+    
+    // Return pointer to data (after header)
+    void* ptr = (void*)((uint8_t*)block + HEADER_SIZE);
+    
+    // Zero-initialize
+    memset(ptr, 0, size);
+    
     return ptr;
 }
 
-void kfree(void *ptr) { // Renamed from free to kfree
-    // printf("kfree(%x)\n", (uint32_t)ptr);
-    // With a bump allocator, free is a no-op unless we implement
-    // a more complex memory manager.
+void kfree(void *ptr) {
+    if (ptr == nullptr) return;
+    
+    // Get the block header
+    BlockHeader* block = (BlockHeader*)((uint8_t*)ptr - HEADER_SIZE);
+    
+    // Sanity check - make sure this looks like a valid block
+    if ((uint8_t*)block < (uint8_t*)HEAP_START || (uint8_t*)block >= (uint8_t*)HEAP_END) {
+        return; // Invalid pointer
+    }
+    
+    // Mark as free
+    block->is_free = true;
+    
+    // Coalesce adjacent free blocks
+    coalesce();
 }
 
 void *krealloc(void* ptr, size_t size) {
     if (size == 0) {
         kfree(ptr);
-        return NULL;
+        return nullptr;
     }
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return kmalloc(size);
     }
-
-    // This is an unsafe and inefficient realloc for a bump allocator.
-    // It assumes realloc only grows and doesn't track old_size.
-    // Copying 'size' bytes is a best guess.
-    void* new_ptr = kmalloc(size);
-    if (new_ptr && ptr) {
-        // We don't know the old size, so we copy 'size' bytes.
-        // This can lead to reading past the old allocation if old size < size,
-        // or losing data if old size > size.
-        memcpy(new_ptr, ptr, size);
+    
+    // Get the block header
+    BlockHeader* block = (BlockHeader*)((uint8_t*)ptr - HEADER_SIZE);
+    size_t old_size = block->size;
+    
+    // If the block is already big enough, just return the same pointer
+    size = align8(size);
+    if (old_size >= size) {
+        return ptr;
     }
-    kfree(ptr); // Free the old pointer (which is a no-op for bump allocator)
+    
+    // Allocate new block
+    void* new_ptr = kmalloc(size);
+    if (new_ptr != nullptr) {
+        // Copy old data
+        memcpy(new_ptr, ptr, old_size);
+        kfree(ptr);
+    }
     return new_ptr;
 }
 
@@ -200,31 +312,85 @@ unsigned char* read_file_to_memory(const char* mount_point, const char* filename
     }
     strcpy(full_path + strlen(full_path), filename);
 
+    // DEBUG: Display the path being opened
+    char path_label[] = {'P', 'A', 'T', 'H', ':', ' ', '\0'};
+    vga_draw_string_simple(50, 280, path_label, 0xAAAAAA, 1);
+    vga_draw_string_simple(100, 280, full_path, 0xFFFFFF, 1);
+    kprintf("read_file_to_memory: Opening %s\n", full_path);
+
+    // Checkpoint: BEFORE fopen call
+    char before_fopen[] = {'F', 'O', 'P', 'E', 'N', '=', '>', '\0'};
+    vga_draw_string_simple(350, 280, before_fopen, 0xFF00FF, 1);
+
     // Open the file
-    rc = ext4_fopen(&file, full_path, "rb");
+    char mode[] = {'r', 'b', '\0'};
+    rc = ext4_fopen(&file, full_path, mode);
+
     if (rc != EOK) {
+        kprintf("read_file_to_memory: ext4_fopen failed with error %d\n", rc);
+        // Display error code
+        char err_label[] = {'E', 'R', 'R', ':', ' ', '\0'};
+        vga_draw_string_simple(50, 300, err_label, 0xFF0000, 1);
+        vga_draw_digit(100, 300, (rc / 10) % 10, 0xFF0000, 1);
+        vga_draw_digit(120, 300, rc % 10, 0xFF0000, 1);
         return NULL;
     }
 
+    kprintf("read_file_to_memory: File opened successfully\n");
+
+    // Checkpoint: File opened
+    char opened[] = {'O', 'P', 'E', 'N', 'E', 'D', '\0'};
+    vga_draw_string_simple(50, 300, opened, 0x00FF00, 1);
+
     // Get file size
     uint64_t size = ext4_fsize(&file);
+    
+    // Checkpoint: Show file size
+    char size_label[] = {'S', 'I', 'Z', 'E', ':', ' ', '\0'};
+    vga_draw_string_simple(130, 300, size_label, 0xAAAAAA, 1);
+    // Display first 6 digits of size
+    vga_draw_digit(180, 300, (size / 100000) % 10, 0xFFFFFF, 1);
+    vga_draw_digit(195, 300, (size / 10000) % 10, 0xFFFFFF, 1);
+    vga_draw_digit(210, 300, (size / 1000) % 10, 0xFFFFFF, 1);
+    vga_draw_digit(225, 300, (size / 100) % 10, 0xFFFFFF, 1);
+    vga_draw_digit(240, 300, (size / 10) % 10, 0xFFFFFF, 1);
+    vga_draw_digit(255, 300, size % 10, 0xFFFFFF, 1);
+
     if (size == 0) {
         ext4_fclose(&file);
         return NULL;
     }
 
+    // Checkpoint: Pre-malloc
+    char malloc_label[] = {'M', 'A', 'L', 'L', 'O', 'C', '\0'};
+    vga_draw_string_simple(50, 320, malloc_label, 0xFFFF00, 1);
+
     // Allocate buffer
     unsigned char* buffer = (unsigned char*)kmalloc(size);
     if (buffer == NULL) {
+        char oom[] = {'O', 'O', 'M', '\0'};
+        vga_draw_string_simple(130, 320, oom, 0xFF0000, 1);
         ext4_fclose(&file);
         return NULL;
     }
+    
+    // Checkpoint: Malloc OK
+    char malloc_ok[] = {'O', 'K', '\0'};
+    vga_draw_string_simple(130, 320, malloc_ok, 0x00FF00, 1);
+
+    // Checkpoint: Pre-read
+    char read_label[] = {'R', 'E', 'A', 'D', 'I', 'N', 'G', '\0'};
+    vga_draw_string_simple(50, 340, read_label, 0xFFFF00, 1);
 
     // Read file content
     size_t bytes_read;
     rc = ext4_fread(&file, buffer, size, &bytes_read);
+    
+    // Checkpoint: Post-read
+    char read_done[] = {'D', 'O', 'N', 'E', '\0'};
+    vga_draw_string_simple(130, 340, read_done, 0x00FF00, 1);
+
     if (rc != EOK || bytes_read != size) {
-        kprintf("Error reading file %s: %d, read %d of %d bytes\n", filename, rc, (uint32_t)bytes_read, (uint32_t)size);
         kfree(buffer);
         ext4_fclose(&file);
         return NULL;

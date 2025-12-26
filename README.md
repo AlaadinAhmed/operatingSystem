@@ -82,49 +82,79 @@ A custom Operating System built from scratch, featuring dual bootloader support 
 ## 🔧 Building
 
 ### Prerequisites
-- GCC cross-compiler (i686-elf-gcc) or system GCC with `-m32`
+- GCC (with `-m32` support for BIOS, 64-bit for UEFI)
 - NASM assembler
-- CMake 3.10+
+- CMake 3.12+
 - QEMU (for testing)
 - `grub-mkrescue` (for ISO creation)
+- `gnu-efi` source (included in `src/external/gnu-efi/`)
+- `mtools` (for FAT image creation)
 
 ### Build Commands
 ```bash
-# Configure
-cmake -B build
-
-# Build
-cmake --build build
-
-# Or using the project Makefile (after cmake)
+# Configure and build
+cd build
+cmake ..
 make
+
+# Or build specific targets
+make kernel_efi    # Build UEFI application
+make iso           # Build GRUB bootable ISO
+make rootfs        # Build root filesystem
 ```
 
 ### Output Files
-- `kernel.elf` - The kernel binary
-- `os-image.bin` - Bootable disk image (custom bootloader)
-- `myos.iso` - Bootable ISO (GRUB)
-- `rootfs.img` - EXT4 filesystem image with resources
+| File | Description |
+|------|-------------|
+| `build/os-image.bin` | Bootable disk image (custom bootloader) |
+| `build/myos.iso` | GRUB bootable ISO (BIOS + UEFI) |
+| `build/efi/myos.efi` | UEFI application |
+| `build/efi/uefi.img` | UEFI bootable FAT image |
+| `build/rootfs.img` | EXT4 filesystem with resources |
+| `build/kernel.elf` | Kernel ELF binary |
 
 ## 🚀 Running
 
-### Custom Bootloader (Floppy/Disk Image)
+### CMake Make Targets
 ```bash
-./run.sh
-```
+cd build && cmake ..
 
-### GRUB ISO
-```bash
-./run_iso.sh
+# BIOS - Custom Bootloader
+make run
+
+# BIOS - GRUB
+make run-grub
+
+# UEFI - GRUB (hybrid ISO)
+make run-grub-uefi
+
+# UEFI - Pure EFI Application
+make run-uefi
 ```
 
 ### Manual QEMU
 ```bash
-# Disk image
-qemu-system-i386 -drive format=raw,file=os-image.bin -serial stdio
+# Custom bootloader (BIOS)
+qemu-system-i386 -fda build/os-image.bin -drive format=raw,file=build/rootfs.img -serial stdio
 
-# ISO with GRUB
-qemu-system-i386 -cdrom myos.iso -drive format=raw,file=rootfs.img -serial stdio
+# GRUB ISO (BIOS)
+qemu-system-i386 -cdrom build/myos.iso -drive format=raw,file=build/rootfs.img -serial stdio
+
+# GRUB ISO (UEFI)
+qemu-system-x86_64 -bios /usr/share/edk2/x64/OVMF.4m.fd -cdrom build/myos.iso -serial stdio
+
+# Pure UEFI
+qemu-system-x86_64 -bios /usr/share/edk2/x64/OVMF.4m.fd -drive format=raw,file=build/efi/uefi.img -serial stdio
+```
+
+### Installation (Real Hardware)
+```bash
+# Install UEFI bootloader to system
+make install-uefi
+
+# Create bootable USB image
+make install-usb
+# Then: sudo dd if=build/myos-uefi-usb.img of=/dev/sdX bs=4M status=progress
 ```
 
 ## 🎨 Design Philosophy

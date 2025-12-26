@@ -3,59 +3,65 @@
 
 using namespace fs;
 
-static int wait_disk_ready() {
-    int timeout = 1000000;
-    while ((inb(0x1F7) & 0xC0) != 0x40) {
-        if (--timeout == 0) return 1;
+// Port bases: Primary IDE = 0x1F0, Secondary IDE = 0x170
+static uint16_t get_data_port(uint8_t drive_id) {
+    return (drive_id < 2) ? 0x1F0 : 0x170;  // drive 0,1 = primary; 2,3 = secondary
+}
+
+static uint16_t get_status_port(uint8_t drive_id) {
+    return (drive_id < 2) ? 0x1F7 : 0x177;
+}
+
+static int wait_disk_ready(uint8_t drive_id) {
+    uint16_t status_port = get_status_port(drive_id);
+    int timeout = 5000000;
+    while ((inb(status_port) & 0xC0) != 0x40) {
+        if (--timeout == 0) {
+            return 1;
+        }
     }
     return 0;
 }
 
 int Ext2Disk::read_sector(uint32_t lba, uint8_t* buffer) {
-    // Select drive (Master/Slave) and LBA bits 24-27
-    outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
-    // Add a 400ns delay by reading the status port 4 times
-    for(int k=0; k<1000; k++) inb(0x1F7);
+    uint16_t base = get_data_port(m_drive_id);
+    uint8_t slave_bit = (m_drive_id & 1) << 4;  // bit 4 = slave select
 
-    if (wait_disk_ready()) {
-        kprintf("Disk Read Timeout (Ready)! LBA: %d\n", lba);
+    // Select drive and LBA bits 24-27
+    outb(base + 6, 0xE0 | slave_bit | ((lba >> 24) & 0x0F));
+    for(int k=0; k<1000; k++) inb(base + 7);
+
+    if (wait_disk_ready(m_drive_id)) {
         return 1;
     }
     
-    // Null byte to port 0x1F1 (Error/Features) - usually not needed but good practice
-    outb(0x1F1, 0x00);
-    // Sector count
-    outb(0x1F2, 1);
-    // LBA bits 0-7
-    outb(0x1F3, (uint8_t)lba);
-    // LBA bits 8-15
-    outb(0x1F4, (uint8_t)(lba >> 8));
-    // LBA bits 16-23
-    outb(0x1F5, (uint8_t)(lba >> 16));
-    // Command: Read Sectors with Retry
-    outb(0x1F7, 0x20);
+    outb(base + 1, 0x00);           // Error/Features
+    outb(base + 2, 1);              // Sector count
+    outb(base + 3, (uint8_t)lba);   // LBA 0-7
+    outb(base + 4, (uint8_t)(lba >> 8));   // LBA 8-15
+    outb(base + 5, (uint8_t)(lba >> 16));  // LBA 16-23
+    outb(base + 7, 0x20);           // Read Sectors command
 
-    // Add a 400ns delay
-    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
+    inb(base + 7); inb(base + 7); inb(base + 7); inb(base + 7);
 
-    // Wait for BSY to clear and DRQ to set
-    // Note: This is a very basic poll. In a real OS, use interrupts or timeout.
-    int timeout = 1000000; // Increased timeout
-    while (!(inb(0x1F7) & 0x08)) {
+    int timeout = 5000000;
+    while (!(inb(base + 7) & 0x08)) {
         if (--timeout == 0) {
-            kprintf("Disk Read Timeout! LBA: %d Status: %x\n", lba, inb(0x1F7));
             return 1;
         }
     }
 
     // Read 256 words (512 bytes)
-    asm volatile ("rep insw" : "+D"(buffer) : "d"(0x1F0), "c"(256) : "memory");
+    asm volatile ("rep insw" : "+D"(buffer) : "d"(base), "c"(256) : "memory");
     return 0;
 }
 
 int Ext2Disk::read_sectors(uint32_t lba, uint8_t* buffer, uint32_t count) {
     if (count == 0) return 0;
     
+    uint16_t base = get_data_port(m_drive_id);
+    uint8_t slave_bit = (m_drive_id & 1) << 4;
+
     // Handle large counts by splitting
     while (count > 255) {
          if (read_sectors(lba, buffer, 255)) return 1;
@@ -64,164 +70,124 @@ int Ext2Disk::read_sectors(uint32_t lba, uint8_t* buffer, uint32_t count) {
          count -= 255;
     }
 
-    // Select drive (Master/Slave) and LBA bits 24-27
-    outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
-    // Add a 400ns delay
-    for(int k=0; k<1000; k++) inb(0x1F7);
+    // Select drive and LBA bits 24-27
+    outb(base + 6, 0xE0 | slave_bit | ((lba >> 24) & 0x0F));
+    for(int k=0; k<1000; k++) inb(base + 7);
 
-    if (wait_disk_ready()) {
-        kprintf("Disk Read Timeout (Ready)! LBA: %d\n", lba);
+    if (wait_disk_ready(m_drive_id)) {
         return 1;
     }
     
-    outb(0x1F1, 0x00);
-    outb(0x1F2, (uint8_t)count);
-    outb(0x1F3, (uint8_t)lba);
-    outb(0x1F4, (uint8_t)(lba >> 8));
-    outb(0x1F5, (uint8_t)(lba >> 16));
-    outb(0x1F7, 0x20); // Read Sectors
+    outb(base + 1, 0x00);
+    outb(base + 2, (uint8_t)count);
+    outb(base + 3, (uint8_t)lba);
+    outb(base + 4, (uint8_t)(lba >> 8));
+    outb(base + 5, (uint8_t)(lba >> 16));
+    outb(base + 7, 0x20); // Read Sectors
 
     uint8_t* ptr = buffer;
     for (uint32_t i = 0; i < count; i++) {
-        // Add a small delay before polling status for next sector
-        inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
+        inb(base + 7); inb(base + 7); inb(base + 7); inb(base + 7);
 
-        int timeout = 1000000;
-        while (!(inb(0x1F7) & 0x08)) {
+        int timeout = 5000000;
+        while (!(inb(base + 7) & 0x08)) {
             if (--timeout == 0) {
-                kprintf("Disk Read Timeout! LBA: %d\n", lba + i);
                 return 1;
             }
         }
-        asm volatile ("rep insw" : "+D"(ptr) : "d"(0x1F0), "c"(256) : "memory");
+        asm volatile ("rep insw" : "+D"(ptr) : "d"(base), "c"(256) : "memory");
     }
     return 0;
 }
 
 int Ext2Disk::write_sector(uint32_t lba, const uint8_t* buffer) {
-    outb(0x1F6, 0xE0 | (m_drive_id << 4) | ((lba >> 24) & 0x0F));
-    // Add a 400ns delay
-    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
+    uint16_t base = get_data_port(m_drive_id);
+    uint8_t slave_bit = (m_drive_id & 1) << 4;
 
-    if (wait_disk_ready()) {
-        kprintf("Disk Write Timeout (Ready)! LBA: %d\n", lba);
+    outb(base + 6, 0xE0 | slave_bit | ((lba >> 24) & 0x0F));
+    inb(base + 7); inb(base + 7); inb(base + 7); inb(base + 7);
+
+    if (wait_disk_ready(m_drive_id)) {
         return 1;
     }
 
-    outb(0x1F1, 0x00);
-    outb(0x1F2, 1);
-    outb(0x1F3, (uint8_t)lba);
-    outb(0x1F4, (uint8_t)(lba >> 8));
-    outb(0x1F5, (uint8_t)(lba >> 16));
-    outb(0x1F7, 0x30); // Command: Write Sectors with Retry
+    outb(base + 1, 0x00);
+    outb(base + 2, 1);
+    outb(base + 3, (uint8_t)lba);
+    outb(base + 4, (uint8_t)(lba >> 8));
+    outb(base + 5, (uint8_t)(lba >> 16));
+    outb(base + 7, 0x30); // Write Sectors command
 
-    // Add a 400ns delay
-    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
+    inb(base + 7); inb(base + 7); inb(base + 7); inb(base + 7);
 
     int timeout = 1000000;
-    while (!(inb(0x1F7) & 0x08)) {
-        uint8_t status = inb(0x1F7);
+    while (!(inb(base + 7) & 0x08)) {
+        uint8_t status = inb(base + 7);
         if (status & 0x01) {
-             kprintf("Disk Write Error! LBA: %d Status: %x Error: %x\n", lba, status, inb(0x1F1));
              return 1;
         }
         if (--timeout == 0) {
-            kprintf("Disk Write Timeout! LBA: %d Status: %x\n", lba, status);
             return 1;
         }
     }
 
-    asm volatile ("rep outsw" : : "S"(buffer), "d"(0x1F0), "c"(256) : "memory");
+    asm volatile ("rep outsw" : : "S"(buffer), "d"(base), "c"(256) : "memory");
 
-    // Wait for write to complete and check for errors
-    outb(0x1F7, 0xE7); // Cache Flush (optional, but good for data integrity)
-    if (wait_disk_ready()) {
-         kprintf("Disk Write Timeout (Finish)! LBA: %d\n", lba);
+    // Wait for write to complete
+    outb(base + 7, 0xE7); // Cache Flush
+    if (wait_disk_ready(m_drive_id)) {
          return 1;
     }
     return 0;
 }
 
-Ext2Disk::Ext2Disk(uint8_t drive_id) : m_drive_id(drive_id) {
+Ext2Disk::Ext2Disk(uint8_t drive_id) : m_drive_id(drive_id), m_partition_offset(0), m_partition_size(0) {
+}
+
+bool Ext2Disk::detect_partition() {
+    uint8_t buffer[512];
+    if (read_sector(0, buffer) != 0) return false;
+
+    // Check for MBR signature
+    if (buffer[510] != 0x55 || buffer[511] != 0xAA) {
+        // No MBR, check if the whole disk is an ext4 filesystem
+        if (read_sector(2, buffer) == 0) { // Superblock is at 1024 bytes (Sector 2)
+            Superblock* sb = (Superblock*)buffer;
+            if (sb->s_magic == 0xEF53) {
+                m_partition_offset = 0;
+                m_partition_size = 0; // Unknown/Whole disk
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Scan partition table (4 entries at 0x1BE)
+    for (int i = 0; i < 4; i++) {
+        uint8_t* entry = buffer + 0x1BE + (i * 16);
+        uint8_t type = entry[4];
+        uint32_t lba_start = *(uint32_t*)(entry + 8);
+        uint32_t sector_count = *(uint32_t*)(entry + 12);
+
+        if (type == 0x83) { // Linux partition
+            // Verify if it's ext4
+            uint8_t sb_buffer[512];
+            if (read_sector(lba_start + 2, sb_buffer) == 0) {
+                Superblock* sb = (Superblock*)sb_buffer;
+                if (sb->s_magic == 0xEF53) {
+                    m_partition_offset = (uint64_t)lba_start * 512;
+                    m_partition_size = (uint64_t)sector_count * 512;
+                    kprintf("Found ext4 partition at LBA %d, size %d sectors\n", lba_start, sector_count);
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 void Ext2Disk::mount() {
-  // We loaded Superblock (Sector 3) to 0x1000.
-  // So Superblock is at 0x1000.
-  Superblock *sb = (Superblock *)(0x1000);
-  if (sb->s_magic == 0xEF53) {
-    uint32_t total_blocks = sb->s_blocks_count;
-    // kprintf("Ext2 File Detected\n");
-    // kprintf("Total Blocks: %d\n", total_blocks);
-    // kprintf("Inodes Count: %d\n", sb->s_inodes_count);
-    
-    // Group Descriptor Table follows Superblock.
-    // Superblock is 1024 bytes.
-    // If we loaded Sector 3 (1024-1535) to 0x1000.
-    // Then 0x1000 contains bytes 1024-1535.
-    // 0x1200 contains bytes 1536-2047.
-    // Group Descriptor starts at byte 2048 (Block 2).
-    // That is Sector 5.
-    // We read 4 sectors starting from Sector 3.
-    // Sector 3 -> 0x1000
-    // Sector 4 -> 0x1200
-    // Sector 5 -> 0x1400 (Start of GDT)
-    
-    Ext2GroupDescriptor *bgd = (Ext2GroupDescriptor *)(0x1400);
-    // kprintf("Inode Table Block: %d\n", bgd->bg_inode_table);
-    // kprintf("Free Blocks: %d\n", bgd->bg_free_blocks_count);
-    
-    // 1. Read Root Inode (Inode #2)
-    // Assuming Block Size is 1024 (s_log_block_size = 0)
-    uint32_t block_size = 1024 << sb->s_log_block_size;
-    // kprintf("Block Size: %d\n", block_size);
-    
-    uint32_t sectors_per_block = block_size / 512;
-    uint32_t inode_table_lba = bgd->bg_inode_table * sectors_per_block;
-    // kprintf("Reading Inode Table at LBA: %d\n", inode_table_lba);
-    
-    uint8_t buffer[1024];
-    read_sector(inode_table_lba, buffer);
-    
-    // Inode size
-    uint16_t inode_size = sb->s_inode_size;
-    if (sb->s_rev_level == 0) inode_size = 128;
-    // kprintf("Inode Size: %d\n", inode_size);
-    
-    // Root inode is index 1 (2nd inode)
-    Ext2Inode* root_inode = (Ext2Inode*)(buffer + inode_size);
-    
-    // kprintf("Root Inode Block[0]: %d\n", root_inode->i_block[0]);
-    
-    // 2. Read Directory Content
-    uint32_t dir_lba = root_inode->i_block[0] * sectors_per_block;
-    // kprintf("Reading Directory at LBA: %d\n", dir_lba);
-    read_sector(dir_lba, buffer);
-    
-    // 3. Iterate Entries
-    Ext2DirEntry* entry = (Ext2DirEntry*)buffer;
-    uint32_t offset = 0;
-    
-    // kprintf("Files in Root:\n");
-    while (offset < 512 && entry->inode != 0) {
-        char name[256];
-        // Safety check for name length
-        int len = entry->name_len;
-        if (len > 255) len = 255;
-        
-        for(int i=0; i<len; i++) name[i] = entry->name[i];
-        name[len] = '\0';
-        
-        // kprintf("- %s (Inode: %d, RecLen: %d)\n", name, entry->inode, entry->rec_len);
-        
-        if (entry->rec_len == 0) {
-            kprintf("Error: Zero RecLen\n");
-            break; 
-        }
-        offset += entry->rec_len;
-        entry = (Ext2DirEntry*)(buffer + offset);
-    }
-  } else {
-    kprintf("Not an Ext2 File System (Magic: %x)\n", sb->s_magic);
-  }
+  // ... existing mount logic if needed, but we mostly use lwext4 now
 }
+

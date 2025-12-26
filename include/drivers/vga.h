@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // --- Double Buffering API ---
 // Gets the hardware framebuffer address
 uint32_t* vga_get_framebuffer();
@@ -18,12 +22,40 @@ void fast_clear_buffer(uint32_t* buffer);
 
 // --- Original API (deprecated for animation, used for startup) ---
 void vga_clear_screen(uint32_t color);
-void vga_draw_char(int x, int y, char c, uint32_t color, int scale = 1);
-void vga_draw_string(int x, int y, const char *str, uint32_t color,
-                     int scale = 1);
+void vga_draw_char(int x, int y, char c, uint32_t color, int scale
+#ifdef __cplusplus
+ = 1
+#endif
+);
+void vga_draw_string(int x, int y, const char *str, uint32_t color, int scale
+#ifdef __cplusplus
+ = 1
+#endif
+);
+void vga_draw_digit(int x, int y, int digit, uint32_t color, int scale
+#ifdef __cplusplus
+ = 1
+#endif
+);
+void vga_draw_char_simple(int x, int y, char c, uint32_t color, int scale
+#ifdef __cplusplus
+ = 1
+#endif
+);
+void vga_draw_string_simple(int x, int y, const char *str, uint32_t color, int scale
+#ifdef __cplusplus
+ = 1
+#endif
+);
 void vga_console_putc(char c);
 void fast_clear();
 // --- End Original API ---
+
+#ifdef __cplusplus
+}
+#endif
+
+
 
 
 #endif

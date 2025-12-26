@@ -115,6 +115,38 @@ main(magic, multiboot_addr)
      └── System::Shutdown()
 ```
 
+## UEFI Boot Sequence
+
+### Stage 1: UEFI Firmware → EFI Application (`efi_entry.c`)
+
+```
+UEFI Firmware loads EFI/BOOT/BOOTX64.EFI
+     │
+     ▼
+efi_main(ImageHandle, SystemTable) executes (64-bit)
+     │
+     ├── InitializeLib() → Sets up gnu-efi globals (ST, BS, RT)
+     ├── ClearScreen()
+     ├── Print(L"Hello from UEFI!")
+     │
+     └── Halt or return to firmware
+```
+
+### BIOS vs UEFI Comparison
+
+| Aspect | BIOS Boot | UEFI Boot |
+|--------|-----------|-----------|
+| Mode | 16-bit Real → 32-bit | Native 64-bit |
+| Graphics | VBE BIOS calls | GOP Protocol |
+| Format | Raw binary | PE/COFF (.efi) |
+| Entry | ASM at 0x7C00 | C `efi_main()` |
+| ABI | System V | Microsoft x64 |
+
+### UEFI Build Process
+```
+efi_entry.c → gcc → efi_entry.o → ld → myos.so → objcopy → myos.efi → uefi.img
+```
+
 ## Memory Map
 
 ```
