@@ -1,6 +1,6 @@
-# Custom Operating System
+# MyOS - Custom Operating System
 
-A custom Operating System built from scratch, featuring dual bootloader support (custom + GRUB), a C++ kernel with modern graphics capabilities, and EXT4 filesystem support.
+A custom 64-bit Operating System built from scratch, featuring UEFI boot support, Intel HD Audio, PS/2 mouse, EXT4 filesystem, and modern graphics.
 
 ## 🎯 Current Status
 
@@ -8,174 +8,101 @@ A custom Operating System built from scratch, featuring dual bootloader support 
 
 | Component | Status | Description |
 |-----------|--------|-------------|
-| **Custom Bootloader** | ✅ Complete | Two-stage assembly bootloader with VBE graphics mode setup |
-| **GRUB Support** | ✅ Complete | Multiboot-compliant kernel entry with automatic VBE detection |
-| **Protected Mode** | ✅ Complete | 32-bit protected mode with GDT setup |
+| **UEFI Boot** | ✅ Complete | Pure UEFI bootloader using gnu-efi |
+| **GRUB Support** | ✅ Complete | Multiboot-compliant with hybrid BIOS/UEFI ISO |
+| **64-bit Kernel** | ✅ Complete | C++ kernel with freestanding runtime |
 | **Memory Management** | ✅ Basic | Simple heap allocator (`kmalloc`/`kfree`) |
-| **VGA Graphics** | ✅ Complete | 1920x1080 linear framebuffer with drawing primitives |
-| **TrueType Fonts** | ✅ Complete | TTF rendering via `stb_truetype` (Roboto, JetBrains Mono, BBHBogle) |
-| **Image Loading** | ✅ Complete | BMP/PNG image support via `stb_image` |
-| **EXT4 Filesystem** | ✅ Complete | Full read/write support via `lwext4` library |
-| **Serial Debugging** | ✅ Complete | COM1 serial output for debugging |
-| **SSE/FPU** | ✅ Complete | Hardware floating-point and SIMD enabled |
+| **VGA Graphics** | ✅ Complete | GOP/VBE linear framebuffer (1920x1080) |
+| **TrueType Fonts** | ✅ Complete | TTF rendering via `stb_truetype` |
+| **Image Loading** | ✅ Complete | BMP/PNG support via `stb_image` |
+| **EXT4 Filesystem** | ✅ Complete | Full read/write support via `lwext4` |
+| **Intel HD Audio** | ✅ Complete | HDA driver (works in VMware) |
+| **AC'97 Audio** | ✅ Complete | AC'97 driver (works in QEMU) |
+| **PS/2 Mouse** | ✅ Complete | Polling-based mouse driver with cursor |
+| **Serial Debugging** | ✅ Complete | COM1 serial output |
 
-### 🔄 In Progress
+## 🔧 Building
 
-- System class architecture for modular OS components
-- Event-driven main loop structure
+### Prerequisites
+- GCC 64-bit cross-compiler
+- NASM assembler
+- CMake 3.12+
+- QEMU and/or VMware Player
+- `grub-mkrescue` (for ISO)
+- `gnu-efi` (included)
+- `mtools` (for FAT images)
 
-## 🗺️ Roadmap
+### Build Commands
+```bash
+cmake .
+make              # Build kernel and ISO
+make iso          # Build GRUB bootable ISO
+make rootfs       # Build root filesystem
+make kernel_efi   # Build UEFI application
+```
 
-### Phase 1: Core Infrastructure ✅
-- [x] Bootloader (Real Mode → Protected Mode)
-- [x] VBE graphics initialization
-- [x] Basic memory management
-- [x] Kernel entry and C++ runtime
-- [x] Serial debugging output
+## 🚀 Running
 
-### Phase 2: Graphics & Filesystem ✅
-- [x] Linear framebuffer graphics
-- [x] TTF font rendering
-- [x] Image loading (BMP, PNG)
-- [x] EXT4 filesystem integration
-- [x] File reading from disk
+### QEMU (AC'97 Audio - Recommended)
+```bash
+make run-grub-uefi-ac97   # UEFI + AC'97 audio (working)
+make run-grub-uefi        # UEFI + HDA (DMA issues in QEMU)
+make run-grub             # BIOS mode
+```
 
-### Phase 3: User Interface (Next)
-- [ ] Window manager / compositor
-- [ ] Mouse cursor and input handling
-- [ ] Keyboard input (PS/2)
-- [ ] Basic widget system (buttons, text fields)
-- [ ] Desktop environment shell
+### VMware Player (Intel HD Audio - Recommended)
+```bash
+make run-vmware           # Creates config and launches VMware
+make vmware-config        # Just create config files
+```
 
-### Phase 4: System Services
-- [ ] Process/task management
-- [ ] Virtual memory (paging)
-- [ ] Interrupt handling (IDT)
-- [ ] System calls
-- [ ] Timer/RTC support
+VMware provides better Intel HD Audio emulation than QEMU.
 
-### Phase 5: Networking & Advanced Features
-- [ ] Network stack (TCP/IP)
-- [ ] Sound driver
-- [ ] USB support
-- [ ] Multi-core support (SMP)
+### Output Files
+| File | Description |
+|------|-------------|
+| `build/myos.iso` | GRUB bootable ISO (BIOS + UEFI) |
+| `build/efi/myos.efi` | UEFI application |
+| `build/rootfs.img` | EXT4 filesystem |
+| `build/myos.vmx` | VMware configuration |
 
 ## 📁 Project Structure
 
 ```
 ├── src/
-│   ├── boot/           # Bootloader (boot.asm, loader.asm, kernel_entry.asm)
-│   ├── kernel/         # Kernel core (kernel.cpp, utils.cpp)
-│   ├── drivers/        # Hardware drivers (VGA, keyboard, SSE)
-│   ├── system/         # System class and main logic
-│   ├── fs/             # Filesystem adapters (lwext4)
-│   ├── print/          # Serial and screen printing
-│   ├── shell/          # Command shell (WIP)
-│   ├── disk/           # Disk I/O operations
-│   └── external/       # Third-party libraries (lwext4)
+│   ├── kernel/         # Kernel main and entry
+│   ├── drivers/
+│   │   ├── audio/      # Intel HDA, AC'97 drivers
+│   │   ├── mouse/      # PS/2 mouse driver
+│   │   ├── gop/        # GOP graphics driver
+│   │   └── bus/        # PCI driver
+│   ├── fs/             # Filesystem (lwext4)
+│   ├── print/          # Serial/screen output
+│   └── external/
+│       ├── lwext4/     # EXT4 library
+│       ├── gnu-efi/    # UEFI library
+│       └── dr_libs/    # Audio file parsers (WAV, MP3, FLAC)
 ├── include/            # Header files
 ├── resources/          # Fonts, images, GRUB config
-├── scripts/            # Build helper scripts
-└── iso/                # ISO build output directory
+└── build/              # Build output
 ```
 
-## 🔧 Building
+## 🎵 Audio Support
 
-### Prerequisites
-- GCC (with `-m32` support for BIOS, 64-bit for UEFI)
-- NASM assembler
-- CMake 3.12+
-- QEMU (for testing)
-- `grub-mkrescue` (for ISO creation)
-- `gnu-efi` source (included in `src/external/gnu-efi/`)
-- `mtools` (for FAT image creation)
+| Driver | Emulator | Status |
+|--------|----------|--------|
+| Intel HDA | VMware | ✅ Working |
+| Intel HDA | QEMU | ❌ DMA issues |
+| AC'97 | QEMU | ✅ Working |
+| AC'97 | VMware | ✅ Working |
 
-### Build Commands
-```bash
-# Configure and build
-cd build
-cmake ..
-make
-
-# Or build specific targets
-make kernel_efi    # Build UEFI application
-make iso           # Build GRUB bootable ISO
-make rootfs        # Build root filesystem
-```
-
-### Output Files
-| File | Description |
-|------|-------------|
-| `build/os-image.bin` | Bootable disk image (custom bootloader) |
-| `build/myos.iso` | GRUB bootable ISO (BIOS + UEFI) |
-| `build/efi/myos.efi` | UEFI application |
-| `build/efi/uefi.img` | UEFI bootable FAT image |
-| `build/rootfs.img` | EXT4 filesystem with resources |
-| `build/kernel.elf` | Kernel ELF binary |
-
-## 🚀 Running
-
-### CMake Make Targets
-```bash
-cd build && cmake ..
-
-# BIOS - Custom Bootloader
-make run
-
-# BIOS - GRUB
-make run-grub
-
-# UEFI - GRUB (hybrid ISO)
-make run-grub-uefi
-
-# UEFI - Pure EFI Application
-make run-uefi
-```
-
-### Manual QEMU
-```bash
-# Custom bootloader (BIOS)
-qemu-system-i386 -fda build/os-image.bin -drive format=raw,file=build/rootfs.img -serial stdio
-
-# GRUB ISO (BIOS)
-qemu-system-i386 -cdrom build/myos.iso -drive format=raw,file=build/rootfs.img -serial stdio
-
-# GRUB ISO (UEFI)
-qemu-system-x86_64 -bios /usr/share/edk2/x64/OVMF.4m.fd -cdrom build/myos.iso -serial stdio
-
-# Pure UEFI
-qemu-system-x86_64 -bios /usr/share/edk2/x64/OVMF.4m.fd -drive format=raw,file=build/efi/uefi.img -serial stdio
-```
-
-### Installation (Real Hardware)
-```bash
-# Install UEFI bootloader to system
-make install-uefi
-
-# Create bootable USB image
-make install-usb
-# Then: sudo dd if=build/myos-uefi-usb.img of=/dev/sdX bs=4M status=progress
-```
-
-## 🎨 Design Philosophy
-
-### Modern C++ on Bare Metal
-This OS leverages C++ features (classes, inheritance, templates) in a freestanding environment. A minimal runtime enables high-level code organization with direct hardware access.
-
-### Component-Based Monolith
-Subsystems (`libfs`, `libdrivers`, `libshell`) are compiled as separate static libraries, enforcing modularity during development while producing a single efficient binary at runtime.
-
-### Graphics-First Approach
-Instead of legacy VGA text mode, the bootloader immediately sets up a VESA Linear Framebuffer (1920x1080x32). This enables:
-- High-quality TrueType font rendering
-- Image display from boot
-- Foundation for a modern GUI
+**Recommendation:** Use VMware for HDA testing, QEMU with AC'97 for quick testing.
 
 ## 📖 Documentation
 
-- [OS Structure & Pseudocode](os_structure.md) - Detailed architectural overview
-- Serial output available on COM1 (115200 baud) for debugging
+- [OS Structure & Architecture](os_structure.md)
+- Serial debug output: COM1 @ 115200 baud
 
 ## 📄 License
 
-This project is for educational purposes. See individual library licenses for third-party code (lwext4, stb_truetype, stb_image).
+Educational project. See individual library licenses for third-party code.

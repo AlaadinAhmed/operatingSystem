@@ -71,6 +71,15 @@ void print_hex(unsigned int num) {
   }
 }
 
+void print_hex64(uint64_t num) {
+  const char *hex = "0123456789ABCDEF";
+  k_putchar('0');
+  k_putchar('x');
+  for (int i = 60; i >= 0; i -= 4) {
+    k_putchar(hex[(num >> i) & 0xF]);
+  }
+}
+
 void vkprintf(const char *fmt, va_list args) {
   for (int i = 0; fmt[i] != '\0'; i++) {
     if (fmt[i] == '%') {
@@ -87,6 +96,10 @@ void vkprintf(const char *fmt, va_list args) {
       } else if (fmt[i] == 'x') {
         int val = va_arg(args, int);
         print_hex(val);
+      } else if (fmt[i] == 'l' && fmt[i+1] == 'x') {
+        i++; // Skip 'l'
+        uint64_t val = va_arg(args, uint64_t);
+        print_hex64(val);
       } else {
         k_putchar(fmt[i]);
       }

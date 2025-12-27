@@ -57,7 +57,7 @@ struct BlockHeader {
 static const size_t HEADER_SIZE = sizeof(BlockHeader);
 static const size_t MIN_BLOCK_SIZE = 16; // Minimum allocation size
 static const size_t HEAP_START = 0x200000;  // 2MB
-static const size_t HEAP_END = 0x1000000;   // 16MB (stack starts here)
+static const size_t HEAP_END = 0x2000000;   // 32MB (increased from 16MB)
 
 static BlockHeader* heap_start = nullptr;
 static bool heap_initialized = false;
@@ -296,7 +296,6 @@ int abs(int x) {
     return (x < 0) ? -x : x;
 }
 
-// Helper function to read a file from lwext4 into memory
 // Returns a pointer to the allocated buffer and sets file_size.
 // Returns NULL on error. The caller is responsible for kfree'ing the buffer.
 unsigned char* read_file_to_memory(const char* mount_point, const char* filename, size_t* file_size) {
@@ -312,93 +311,35 @@ unsigned char* read_file_to_memory(const char* mount_point, const char* filename
     }
     strcpy(full_path + strlen(full_path), filename);
 
-    // DEBUG: Display the path being opened
-    char path_label[] = {'P', 'A', 'T', 'H', ':', ' ', '\0'};
-    vga_draw_string_simple(50, 280, path_label, 0xAAAAAA, 1);
-    vga_draw_string_simple(100, 280, full_path, 0xFFFFFF, 1);
-    kprintf("read_file_to_memory: Opening %s\n", full_path);
-
-    // Checkpoint: BEFORE fopen call
-    char before_fopen[] = {'F', 'O', 'P', 'E', 'N', '=', '>', '\0'};
-    vga_draw_string_simple(350, 280, before_fopen, 0xFF00FF, 1);
-
-    // Open the file
-    char mode[] = {'r', 'b', '\0'};
-    rc = ext4_fopen(&file, full_path, mode);
-
+    rc = ext4_fopen(&file, full_path, "rb");
     if (rc != EOK) {
-        kprintf("read_file_to_memory: ext4_fopen failed with error %d\n", rc);
-        // Display error code
-        char err_label[] = {'E', 'R', 'R', ':', ' ', '\0'};
-        vga_draw_string_simple(50, 300, err_label, 0xFF0000, 1);
-        vga_draw_digit(100, 300, (rc / 10) % 10, 0xFF0000, 1);
-        vga_draw_digit(120, 300, rc % 10, 0xFF0000, 1);
+        kprintf("read_file_to_memory: Failed to open %s (error %d)\n", full_path, rc);
         return NULL;
     }
 
-    kprintf("read_file_to_memory: File opened successfully\n");
-
-    // Checkpoint: File opened
-    char opened[] = {'O', 'P', 'E', 'N', 'E', 'D', '\0'};
-    vga_draw_string_simple(50, 300, opened, 0x00FF00, 1);
-
-    // Get file size
     uint64_t size = ext4_fsize(&file);
-    
-    // Checkpoint: Show file size
-    char size_label[] = {'S', 'I', 'Z', 'E', ':', ' ', '\0'};
-    vga_draw_string_simple(130, 300, size_label, 0xAAAAAA, 1);
-    // Display first 6 digits of size
-    vga_draw_digit(180, 300, (size / 100000) % 10, 0xFFFFFF, 1);
-    vga_draw_digit(195, 300, (size / 10000) % 10, 0xFFFFFF, 1);
-    vga_draw_digit(210, 300, (size / 1000) % 10, 0xFFFFFF, 1);
-    vga_draw_digit(225, 300, (size / 100) % 10, 0xFFFFFF, 1);
-    vga_draw_digit(240, 300, (size / 10) % 10, 0xFFFFFF, 1);
-    vga_draw_digit(255, 300, size % 10, 0xFFFFFF, 1);
-
     if (size == 0) {
         ext4_fclose(&file);
         return NULL;
     }
 
-    // Checkpoint: Pre-malloc
-    char malloc_label[] = {'M', 'A', 'L', 'L', 'O', 'C', '\0'};
-    vga_draw_string_simple(50, 320, malloc_label, 0xFFFF00, 1);
-
-    // Allocate buffer
     unsigned char* buffer = (unsigned char*)kmalloc(size);
     if (buffer == NULL) {
-        char oom[] = {'O', 'O', 'M', '\0'};
-        vga_draw_string_simple(130, 320, oom, 0xFF0000, 1);
+        kprintf("read_file_to_memory: OOM for %s\n", full_path);
         ext4_fclose(&file);
         return NULL;
     }
-    
-    // Checkpoint: Malloc OK
-    char malloc_ok[] = {'O', 'K', '\0'};
-    vga_draw_string_simple(130, 320, malloc_ok, 0x00FF00, 1);
 
-    // Checkpoint: Pre-read
-    char read_label[] = {'R', 'E', 'A', 'D', 'I', 'N', 'G', '\0'};
-    vga_draw_string_simple(50, 340, read_label, 0xFFFF00, 1);
-
-    // Read file content
     size_t bytes_read;
     rc = ext4_fread(&file, buffer, size, &bytes_read);
     
-    // Checkpoint: Post-read
-    char read_done[] = {'D', 'O', 'N', 'E', '\0'};
-    vga_draw_string_simple(130, 340, read_done, 0x00FF00, 1);
-
     if (rc != EOK || bytes_read != size) {
         kfree(buffer);
         ext4_fclose(&file);
         return NULL;
     }
 
-    // Close the file
     ext4_fclose(&file);
-
     *file_size = (size_t)size;
     return buffer;
 }
@@ -453,4 +394,22 @@ extern "C" void __gxx_personality_v0() {
 
 extern "C" void _Unwind_Resume() {
     while(1);
+}
+
+// C++ static local variable guard stubs
+// These are used by the compiler for thread-safe initialization of static locals
+extern "C" int __cxa_guard_acquire(uint64_t* guard) {
+    if (*guard == 0) {
+        *guard = 1;  // Mark as initializing
+        return 1;    // Return 1 to indicate initialization should proceed
+    }
+    return 0;        // Already initialized
+}
+
+extern "C" void __cxa_guard_release(uint64_t* guard) {
+    *guard = 2;      // Mark as fully initialized
+}
+
+extern "C" void __cxa_guard_abort(uint64_t* guard) {
+    *guard = 0;      // Reset on failure
 }

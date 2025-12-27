@@ -1,48 +1,46 @@
 #include "drivers/vga.h"
 #include "drivers/font_data.h"
 #include "print/print.h"
+#include "common/boot_info.h"
 #include <cstdint>
 
 // VBE Mode Info Block is at 0x5200
 #define VBE_MODE_INFO 0x5200
 
-// For EFI boot, we store the 64-bit framebuffer address here
-extern "C" {
-    uint64_t g_efi_framebuffer = 0;
-    uint32_t g_efi_width = 0;
-    uint32_t g_efi_height = 0;
-    uint32_t g_efi_pitch = 0;
-}
-
-
 // Public function to get the hardware framebuffer address
 // Supports both legacy VBE (32-bit) and EFI (64-bit) framebuffer addresses
 uint32_t *vga_get_framebuffer() { 
     // Check if EFI framebuffer is set (non-zero)
-    if (g_efi_framebuffer != 0) {
-        return (uint32_t*)(uintptr_t)g_efi_framebuffer;
+    if (g_efi_boot_info.fb_addr != 0) {
+        return (uint32_t*)(uintptr_t)g_efi_boot_info.fb_addr;
     }
     // Fall back to legacy VBE mode info
     return *(uint32_t **)(VBE_MODE_INFO + 40); 
 }
 
 static uint16_t get_pitch() { 
-    if (g_efi_pitch != 0) {
-        return g_efi_pitch * 4; // Convert pixels to bytes
+    if (g_efi_boot_info.fb_addr != 0) {
+        if (g_efi_boot_info.pitch != 0) {
+            return g_efi_boot_info.pitch * 4; // Convert pixels to bytes
+        }
+        // Fallback: assume packed pixels if pitch is not provided
+        if (g_efi_boot_info.width != 0) {
+            return g_efi_boot_info.width * 4;
+        }
     }
     return *(uint16_t *)(VBE_MODE_INFO + 16); 
 }
 
 static uint16_t get_width() { 
-    if (g_efi_width != 0) {
-        return g_efi_width;
+    if (g_efi_boot_info.width != 0) {
+        return g_efi_boot_info.width;
     }
     return *(uint16_t *)(VBE_MODE_INFO + 18); 
 }
 
 static uint16_t get_height() { 
-    if (g_efi_height != 0) {
-        return g_efi_height;
+    if (g_efi_boot_info.height != 0) {
+        return g_efi_boot_info.height;
     }
     return *(uint16_t *)(VBE_MODE_INFO + 20); 
 }

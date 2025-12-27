@@ -1,10 +1,11 @@
 #include <cstdint>
 
-// stb_image defines
+// stb_image defines - must be before including stb_image.h
 #define STBI_NO_STDIO
 #define STBI_NO_LINEAR
 #define STBI_NO_HDR
 #define STBI_NO_SIMD
+#define STBI_NO_THREAD_LOCALS
 #define STBI_ASSERT(x) ((void)0)
 #define STBI_MALLOC(sz) kmalloc(sz)
 #define STBI_REALLOC(p, newsz) krealloc(p, newsz)
@@ -89,6 +90,10 @@ private:
   void ProcessInput();
   void HandleEvents();
   unsigned char *LoadFont(const char *font_path, stbtt_fontinfo *font_info);
+  
+  // Subsystem initialization
+  bool InitFilesystem();
+  void InitDrivers();
 
   void SaveCursorBackground(int x, int y);
   void RestoreCursorBackground();
