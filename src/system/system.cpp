@@ -1,6 +1,8 @@
 #include "system/system.h"
 #include "common/boot_info.h"
 #include "drivers/audio/audio.h"
+#include "drivers/audio/audio.h"
+#include "drivers/audio/audio_player.h"
 #include "drivers/mouse/mouse.h"
 #include "drivers/vga.h"
 #include "fs/lwext4_adapter.h"
@@ -83,6 +85,10 @@ void System::Initialize() {
     return;
   }
   DrawText(100, 400, "MyOS v0.1", 0xFFFFFF, 32.0f, &m_robotoFontInfo);
+  
+  // Play startup sound
+  kprintf("System: Playing startup sound...\n");
+  start_audio_file("as_it_was.wav");
 
   kprintf("System: Ready\n");
 }
@@ -96,7 +102,7 @@ void System::Run() {
     Update();
 
     MouseState mouse = mouse_update();
-
+    audio_player_tick();
     // Only update cursor if position changed
     bool cursorMoved = (mouse.x != m_cursorX || mouse.y != m_cursorY);
 

@@ -76,7 +76,7 @@ for file in "$ROOT_DIR/resources/logo.bmp" "$ROOT_DIR/resources/blackbuck.bmp"; 
 done
 
 # Also copy fonts to root for backwards compatibility (temporary)
-for file in "$ROOT_DIR/resources/BBHBogle-Regular.ttf" "$ROOT_DIR/resources/Roboto-Regular.ttf" "$ROOT_DIR/resources/JetBrainsMono-Bold.ttf"; do
+for file in "$ROOT_DIR/resources/BBHBogle-Regular.ttf" "$ROOT_DIR/resources/Roboto-Regular.ttf" "$ROOT_DIR/resources/JetBrainsMono-Bold.ttf" "$ROOT_DIR/resources/as_it_was.wav" "$ROOT_DIR/resources/short_clip.wav"; do
     if [ -f "$file" ]; then
         dest_file=$(basename "$file")
         echo "write $file $dest_file" >> "$ROOT_DIR/debugfs_cmds"

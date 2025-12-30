@@ -187,7 +187,7 @@ void IntelHDA::PlayTestSound() {
     RegWrite32(sd_offset + HDA_SD_BDLPU, (uint32_t)(bdl_phys >> 32));
     RegWrite16(sd_offset + HDA_SD_LVI, 1); // Last Valid Index = 1
     RegWrite32(sd_offset + HDA_SD_CBL, 8192); // Total buffer length
-    RegWrite16(sd_offset + HDA_SD_FMT, 0x0011); // 48kHz, 16-bit, Mono
+    RegWrite16(sd_offset + HDA_SD_FMT, 0x4011); // 48kHz, 16-bit, Stereo
 
     // Set Stream ID 1 (bits 23:20 -> ctl2 bits 7:4)
     *ctl2 = (1 << 4); // Stream ID 1
@@ -217,4 +217,82 @@ void IntelHDA::PlayTestSound() {
         kprintf("Pos: %d, STS: %x, CTL0: %x\n", pos, status, *ctl0);
         for(volatile int j=0; j<1000000; j++);
     }
+}
+
+void IntelHDA::StartStream(uint16_t format) {
+    uint32_t sd_offset = m_output_stream_offset;
+    
+    // Setup BDL entries
+    uint64_t buf_phys = (uint64_t)s_audio_buffer;
+    s_bdl[0].address = buf_phys;
+    s_bdl[0].length = 4096; // 2048 samples * 2 bytes
+    s_bdl[0].flags = 1; // IOC - Interrupt on Completion
+    
+    s_bdl[1].address = buf_phys + 4096;
+    s_bdl[1].length = 4096;
+    s_bdl[1].flags = 1; // IOC
+    
+    // Flush cache
+    __asm__ volatile("wbinvd");
+    __asm__ volatile("mfence"); // Memory fence for ordering
+
+    uint64_t bdl_phys = (uint64_t)s_bdl;
+
+    volatile uint8_t* ctl0 = (volatile uint8_t*)(m_base + sd_offset + 0); // Bits 7:0: SRST, RUN
+    volatile uint8_t* ctl2 = (volatile uint8_t*)(m_base + sd_offset + 2); // Bits 23:16 (Stream ID)
+    volatile uint8_t* sts = (volatile uint8_t*)(m_base + sd_offset + 3);
+
+    // Step 1: Stop the stream and enter reset
+    *ctl0 = 0; // Stop RUN, Clear SRST
+    for (volatile int i = 0; i < 10000; i++); // Small delay
+    
+    // Step 2: Set SRST (Enter Reset)
+    *ctl0 = 1;
+    
+    // Step 3: Wait for SRST to be set (with timeout - QEMU workaround)
+    int timeout = 10000;
+    while (!(*ctl0 & 1) && --timeout > 0);
+    
+    // Step 4: Clear Status
+    *sts = 0x1C; // Clear status
+
+    // Step 5: Setup Registers
+    RegWrite32(sd_offset + HDA_SD_BDLPL, (uint32_t)bdl_phys);
+    RegWrite32(sd_offset + HDA_SD_BDLPU, (uint32_t)(bdl_phys >> 32));
+    RegWrite16(sd_offset + HDA_SD_LVI, 1); // Last Valid Index = 1
+    RegWrite32(sd_offset + HDA_SD_CBL, 8192); // Total buffer length
+    RegWrite16(sd_offset + HDA_SD_FMT, format); // Use provided format
+    *ctl2 = (1 << 4); // Stream ID 1
+
+    // Step 6: Clear SRST (Exit Reset)
+    *ctl0 = 0;
+    
+    // Step 7: Wait for SRST to be clear (with timeout)
+    timeout = 10000;
+    while ((*ctl0 & 1) && --timeout > 0);
+    
+    // Unmute (Assuming already done in Init or PlayTestSound, but good to ensure)
+    SendVerb(0, 0x2, 0x70500); // D0
+    SendVerb(0, 0x2, 0xB07F);  // Unmute DAC
+    SendVerb(0, 0x2, 0x70610); // Stream 1
+    SendVerb(0, 0x4, 0xB07F);  // Unmute Pin
+    SendVerb(0, 0x4, 0x70740); // Enable Out
+    
+    RegWrite8(sd_offset + HDA_SD_CTL, 2); // RUN
+}
+
+void IntelHDA::StopStream() {
+    uint32_t sd_offset = m_output_stream_offset;
+    RegWrite8(sd_offset + HDA_SD_CTL, 0); // Stop
+}
+
+uint32_t IntelHDA::GetStreamPos() {
+    uint32_t sd_offset = m_output_stream_offset;
+    return RegRead32(sd_offset + HDA_SD_LPIB);
+}
+
+int16_t* IntelHDA::GetBuffer(int index) {
+    if (index == 0) return s_audio_buffer;
+    if (index == 1) return s_audio_buffer + 2048; // 2048 samples offset (4096 bytes)
+    return nullptr;
 }
