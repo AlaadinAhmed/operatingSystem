@@ -1,108 +1,71 @@
 # MyOS - Custom Operating System
 
-A custom 64-bit Operating System built from scratch, featuring UEFI boot support, Intel HD Audio, PS/2 mouse, EXT4 filesystem, and modern graphics.
+A custom 64-bit Operating System built from scratch, featuring UEFI boot support, a custom UI compositor, Intel HD Audio, and modern graphics.
 
-## 🎯 Current Status
+## Current Status
 
-### ✅ Completed Features
+### Completed Features
 
 | Component | Status | Description |
 |-----------|--------|-------------|
-| **UEFI Boot** | ✅ Complete | Pure UEFI bootloader using gnu-efi |
-| **GRUB Support** | ✅ Complete | Multiboot-compliant with hybrid BIOS/UEFI ISO |
-| **64-bit Kernel** | ✅ Complete | C++ kernel with freestanding runtime |
-| **Memory Management** | ✅ Basic | Simple heap allocator (`kmalloc`/`kfree`) |
-| **VGA Graphics** | ✅ Complete | GOP/VBE linear framebuffer (1920x1080) |
-| **TrueType Fonts** | ✅ Complete | TTF rendering via `stb_truetype` |
-| **Image Loading** | ✅ Complete | BMP/PNG support via `stb_image` |
-| **EXT4 Filesystem** | ✅ Complete | Full read/write support via `lwext4` |
-| **Intel HD Audio** | ✅ Complete | HDA driver (works in VMware) |
-| **AC'97 Audio** | ✅ Complete | AC'97 driver (works in QEMU) |
-| **PS/2 Mouse** | ✅ Complete | Polling-based mouse driver with cursor |
-| **Serial Debugging** | ✅ Complete | COM1 serial output |
+| **UEFI Boot** | Complete | Native UEFI bootloader using gnu-efi |
+| **Graphics** | Complete | GOP linear framebuffer (1920x1080) with **Double Buffering** |
+| **UI System** | Complete | Custom Compositor, Windowing system, Buttons, Labels |
+| **Input** | Complete | PS/2 Mouse & Keyboard (Interrupt-driven) |
+| **Audio** | Complete | Intel HDA & AC'97 drivers (WAV playback) |
+| **Filesystem** | Complete | EXT4 read/write support via `lwext4` |
+| **USB** | In Progress | XHCI Controller detection |
+| **Fonts** | Complete | TrueType rendering via `stb_truetype` |
+| **Images** | Complete | BMP/PNG support via `stb_image` |
 
-## 🔧 Building
+## Building
 
 ### Prerequisites
 - GCC 64-bit cross-compiler
 - NASM assembler
 - CMake 3.12+
-- QEMU and/or VMware Player
-- `grub-mkrescue` (for ISO)
+- QEMU (for testing)
 - `gnu-efi` (included)
 - `mtools` (for FAT images)
 
 ### Build Commands
 ```bash
 cmake .
-make              # Build kernel and ISO
-make iso          # Build GRUB bootable ISO
-make rootfs       # Build root filesystem
-make kernel_efi   # Build UEFI application
+make run-grub-uefi        # Build and run in QEMU (UEFI mode)
 ```
 
-## 🚀 Running
+## Running
 
-### QEMU (AC'97 Audio - Recommended)
+### QEMU (Recommended)
 ```bash
-make run-grub-uefi-ac97   # UEFI + AC'97 audio (working)
-make run-grub-uefi        # UEFI + HDA (DMA issues in QEMU)
-make run-grub             # BIOS mode
+make run-grub-uefi        # UEFI + HDA Audio + UI
 ```
 
-### VMware Player (Intel HD Audio - Recommended)
+### VMware Player
 ```bash
 make run-vmware           # Creates config and launches VMware
-make vmware-config        # Just create config files
 ```
 
-VMware provides better Intel HD Audio emulation than QEMU.
+## Project Structure
 
-### Output Files
-| File | Description |
-|------|-------------|
-| `build/myos.iso` | GRUB bootable ISO (BIOS + UEFI) |
-| `build/efi/myos.efi` | UEFI application |
-| `build/rootfs.img` | EXT4 filesystem |
-| `build/myos.vmx` | VMware configuration |
+The project is organized into the following main directories:
 
-## 📁 Project Structure
+*   **src/kernel**: Kernel entry point and main initialization logic.
+*   **src/system**: Core system class managing UI, Input, and Audio orchestration.
+*   **src/ui**: UI Widget implementations (Button, Text, Window).
+*   **src/graphics**: Graphics subsystem including Compositor and Font Renderer.
+*   **src/drivers**: Hardware drivers for Audio (HDA/AC97), Mouse, USB, and PCI.
+*   **src/fs**: Filesystem abstraction and lwext4 integration.
+*   **src/external**: Third-party libraries (lwext4, stb, gnu-efi).
+*   **include**: Header files for all components.
+*   **build**: Build artifacts and output images.
 
-```
-├── src/
-│   ├── kernel/         # Kernel main and entry
-│   ├── drivers/
-│   │   ├── audio/      # Intel HDA, AC'97 drivers
-│   │   ├── mouse/      # PS/2 mouse driver
-│   │   ├── gop/        # GOP graphics driver
-│   │   └── bus/        # PCI driver
-│   ├── fs/             # Filesystem (lwext4)
-│   ├── print/          # Serial/screen output
-│   └── external/
-│       ├── lwext4/     # EXT4 library
-│       ├── gnu-efi/    # UEFI library
-│       └── dr_libs/    # Audio file parsers (WAV, MP3, FLAC)
-├── include/            # Header files
-├── resources/          # Fonts, images, GRUB config
-└── build/              # Build output
-```
+## Documentation
 
-## 🎵 Audio Support
-
-| Driver | Emulator | Status |
-|--------|----------|--------|
-| Intel HDA | VMware | ✅ Working |
-| Intel HDA | QEMU | ❌ DMA issues |
-| AC'97 | QEMU | ✅ Working |
-| AC'97 | VMware | ✅ Working |
-
-**Recommendation:** Use VMware for HDA testing, QEMU with AC'97 for quick testing.
-
-## 📖 Documentation
-
-- [OS Structure & Architecture](os_structure.md)
+- [OS Architecture](os_structure.md)
 - Serial debug output: COM1 @ 115200 baud
 
-## 📄 License
+## License
 
 Educational project. See individual library licenses for third-party code.
+
