@@ -30,7 +30,9 @@ A custom 64-bit Operating System built from scratch, featuring UEFI boot support
 
 ### Build Commands
 ```bash
-cmake .
+mkdir build
+cd build
+cmake ..
 make run-grub-uefi        # Build and run in QEMU (UEFI mode)
 ```
 
