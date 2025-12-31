@@ -1,4 +1,6 @@
 #include "mouse/mouse.h"
+#include "mouse/mouse.h"
+#include "drivers/pic.h"
 #include "print/print.h"
 #include <cstdint>
 
@@ -84,53 +86,56 @@ void mouse_init(float sensitivity) {
   mouse_write_data(0xF4); // Enable data reporting
   mouse_read_data();       // Read ACK
   
+  // Unmask IRQ12 (Mouse Interrupt)
+  pic_clear_mask(12);
+
   kprintf("Mouse initialized\n");
 }
 
-MouseState mouse_update() {
+// Interrupt handler called from ISR44
+void mouse_on_interrupt() {
   static int packet_byte = 0;
   static MousePacket packet;
 
-  // Check if there's data in the output buffer
-  while (inb(0x64) & 1) {
-    uint8_t data = inb(0x60);
-    
-    // Check if this is mouse data (bit 5 of status register)
-    // For simplicity, we'll just validate the first byte
-    
-    if (packet_byte == 0) {
-      // First byte: must have bit 3 set (always 1), contains buttons
-      if (!(data & 0x08)) {
-        // Invalid packet start, skip this byte
-        continue;
-      }
-      packet.buttons = data;
-      packet_byte++;
-    } else if (packet_byte == 1) {
-      // Second byte: delta X
-      packet.delta_x = (int8_t)data;
-      packet_byte++;
-    } else if (packet_byte == 2) {
-      // Third byte: delta Y
-      packet.delta_y = (int8_t)data;
-      packet_byte = 0;
+  // Read data from port 0x60
+  uint8_t data = inb(0x60);
 
-      // Process the complete packet
-      mouse_state.x += packet.delta_x;
-      mouse_state.y -= packet.delta_y; // Invert Y (mouse Y is inverted)
-
-      // Clamp to screen bounds
-      if (mouse_state.x < 0) mouse_state.x = 0;
-      if (mouse_state.y < 0) mouse_state.y = 0;
-      if (mouse_state.x >= SCREEN_WIDTH) mouse_state.x = SCREEN_WIDTH - 1;
-      if (mouse_state.y >= SCREEN_HEIGHT) mouse_state.y = SCREEN_HEIGHT - 1;
-
-      // Update button states
-      mouse_state.buttons[0] = (packet.buttons & 0x01) != 0; // Left
-      mouse_state.buttons[1] = (packet.buttons & 0x02) != 0; // Right
-      mouse_state.buttons[2] = (packet.buttons & 0x04) != 0; // Middle
+  if (packet_byte == 0) {
+    // First byte: must have bit 3 set (always 1), contains buttons
+    if (!(data & 0x08)) {
+      // Invalid packet start, skip this byte
+      return;
     }
+    packet.buttons = data;
+    packet_byte++;
+  } else if (packet_byte == 1) {
+    // Second byte: delta X
+    packet.delta_x = (int8_t)data;
+    packet_byte++;
+  } else if (packet_byte == 2) {
+    // Third byte: delta Y
+    packet.delta_y = (int8_t)data;
+    packet_byte = 0;
+
+    // Process the complete packet
+    mouse_state.x += packet.delta_x;
+    mouse_state.y -= packet.delta_y; // Invert Y (mouse Y is inverted)
+
+    // Clamp to screen bounds
+    if (mouse_state.x < 0) mouse_state.x = 0;
+    if (mouse_state.y < 0) mouse_state.y = 0;
+    if (mouse_state.x >= SCREEN_WIDTH) mouse_state.x = SCREEN_WIDTH - 1;
+    if (mouse_state.y >= SCREEN_HEIGHT) mouse_state.y = SCREEN_HEIGHT - 1;
+
+    // Update button states
+    mouse_state.buttons[0] = (packet.buttons & 0x01) != 0; // Left
+    mouse_state.buttons[1] = (packet.buttons & 0x02) != 0; // Right
+    mouse_state.buttons[2] = (packet.buttons & 0x04) != 0; // Middle
   }
+}
+
+MouseState mouse_update() {
+  // Return the current state (updated by interrupt handler)
   return mouse_state;
 }
 

@@ -2,7 +2,9 @@
 #include <stdarg.h>
 
 // Dummy stdout for lwext4
-extern "C" void* stdout = (void*)1;
+extern "C" {
+    void* stdout = (void*)1;
+}
 
 // Dummy fflush for lwext4
 extern "C" int fflush(void* stream) {

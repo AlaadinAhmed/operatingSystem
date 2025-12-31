@@ -47,6 +47,7 @@ static const int MAX_CLICKABLE_REGIONS = 64;
 class System {
 
 public:
+  static System *s_instance;
   System();
   ~System();
   void Initialize();
@@ -57,9 +58,18 @@ public:
                    int img_height, int channels);
   void LoadImage(const char *filename, int x, int y, int &out_width,
                  int &out_height);
+  void ToggleDebugInfo();
+  void UpdateDebugInfo();
+
+  // Test UI
+  class Button *m_testButton;
+  class Text *m_versionLabel;
 
 private:
+  bool m_debugInfoVisible;
+  class Text *m_debugLabels[10];
   uint32_t *framebuffer;
+  uint32_t *m_backbuffer;
   stbtt_fontinfo m_robotoFontInfo;
   unsigned char *m_robotoFontBuffer;
   stbtt_fontinfo m_bbhbogleFontInfo;
@@ -69,7 +79,6 @@ private:
 
   // Cursor state
   int m_cursorX, m_cursorY;
-  uint32_t m_cursorBackground[CURSOR_WIDTH * CURSOR_HEIGHT];
   bool m_cursorDrawn;
   bool m_prevLeftButton; // For click detection (edge trigger)
 
@@ -90,14 +99,13 @@ private:
   void ProcessInput();
   void HandleEvents();
   unsigned char *LoadFont(const char *font_path, stbtt_fontinfo *font_info);
-  
+
   // Subsystem initialization
   bool InitFilesystem();
   void InitDrivers();
 
-  void SaveCursorBackground(int x, int y);
-  void RestoreCursorBackground();
   void DrawCursor(int x, int y);
+
   DirectoryEntry *GetDirectoryListing(const char *path, int *count);
 
   // Click detection helpers
@@ -109,4 +117,7 @@ private:
   // Directory UI
   void DisplayDirectory(const char *path);
   void OnEntryClicked(int entryIndex);
+
+  // Compositor
+  class Compositor *m_compositor;
 };

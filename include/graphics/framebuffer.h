@@ -20,6 +20,7 @@ void flush_framebuffer();      // Force immediate screen refresh
 void clear_screen(uint32_t color);
 void draw_pixel(int x, int y, uint32_t color);
 void draw_rect(int x, int y, int width, int height, uint32_t color);
+void draw_rounded_rect(int x, int y, int width, int height, int radius, uint32_t color);
 
 // Dimension accessors
 uint32_t get_width();

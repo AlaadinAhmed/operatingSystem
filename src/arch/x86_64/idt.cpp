@@ -11,10 +11,40 @@ void set_idt_gate(int n, uint64_t handler) {
   idt[n].reserved = 0;
 }
 extern "C" {
-  void isr0(); void isr1(); void isr2(); void isr3(); void isr4(); void isr5(); void isr6(); void isr7();
-  void isr8(); void isr9(); void isr10(); void isr11(); void isr12(); void isr13(); void isr14(); void isr15();
-  void isr16(); void isr17(); void isr18(); void isr19(); void isr20(); void isr21(); void isr22(); void isr23();
-  void isr24(); void isr25(); void isr26(); void isr27(); void isr28(); void isr29(); void isr30(); void isr31();
+void isr0();
+void isr1();
+void isr2();
+void isr3();
+void isr4();
+void isr5();
+void isr6();
+void isr7();
+void isr8();
+void isr9();
+void isr10();
+void isr11();
+void isr12();
+void isr13();
+void isr14();
+void isr15();
+void isr16();
+void isr17();
+void isr18();
+void isr19();
+void isr20();
+void isr21();
+void isr22();
+void isr23();
+void isr24();
+void isr25();
+void isr26();
+void isr27();
+void isr28();
+void isr29();
+void isr30();
+void isr31();
+void isr33();
+void isr44();
 }
 
 void init_idt() {
@@ -54,6 +84,8 @@ void init_idt() {
   set_idt_gate(29, (uint64_t)isr29);
   set_idt_gate(30, (uint64_t)isr30);
   set_idt_gate(31, (uint64_t)isr31);
+  set_idt_gate(33, (uint64_t)isr33); // Keyboard interrupt
+  set_idt_gate(44, (uint64_t)isr44); // Mouse interrupt
 
   // Load the IDT using lidt instruction
   asm volatile("lidt %0" : : "m"(idtr));

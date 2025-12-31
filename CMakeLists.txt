@@ -12,7 +12,7 @@ enable_language(ASM_NASM)
 enable_language(CXX)
 
 # Compiler flags for 64-bit freestanding
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -ffreestanding -mno-red-zone -fno-stack-protector -g -msse")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -ffreestanding -mno-red-zone -fno-stack-protector -g -msse -fno-rtti -fno-exceptions")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64 -ffreestanding -mno-red-zone -fno-stack-protector -g")
 add_definitions(-DCONFIG_EXT4_USE_XATTR=1 -DCONFIG_XATTR_ENABLE=1 -DCONFIG_META_CSUM_ENABLE=1)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/resources)
@@ -41,12 +41,12 @@ add_custom_command(
 file(GLOB LWEXT4_SOURCES "src/external/lwext4/src/*.c")
 list(REMOVE_ITEM LWEXT4_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/external/lwext4/src/ext4_mkfs.c")
 add_library(lwext4_lib STATIC ${LWEXT4_SOURCES})
-target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1 CONFIG_USE_DEFAULT_CFG=1)
+target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1 CONFIG_USE_DEFAULT_CFG=1 CONFIG_DEBUG_PRINTF=0 CONFIG_DEBUG_ASSERT=0)
 target_include_directories(lwext4_lib PUBLIC src/external/lwext4/include)
 
 # Drivers Library
-add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp src/drivers/audio/audio_player.cpp)
-target_include_directories(drivers_lib PUBLIC include/drivers src/external)
+add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp src/drivers/audio/audio_player.cpp src/drivers/pic.cpp src/drivers/bus/usb.cpp)
+target_include_directories(drivers_lib PUBLIC include/drivers src/external src)
 
 # FS Library
 add_library(fs_lib STATIC src/fs/lwext4_adapter.cpp)
@@ -69,18 +69,19 @@ add_library(disk_lib STATIC src/disk/disk.cpp)
 target_include_directories(disk_lib PUBLIC include/disk)
 
 # Kernel Library
-add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm)
-target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include)
+add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/graphics/font_renderer.cpp src/graphics/compositor.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm src/kernel/ext4_print_adapter.cpp)
+target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include src include/print)
 
 
-# ext4_print_adapter Library (for printf redirect)
-add_library(ext4_print_adapter_lib STATIC src/kernel/ext4_print_adapter.cpp)
-target_include_directories(ext4_print_adapter_lib PUBLIC include/print)
+
 
 # Kernel Executable (BIOS/UEFI)
 add_executable(kernel.elf src/arch/x86_64/kernel/kernel_entry.asm)
 
-target_link_libraries(kernel.elf PRIVATE kernel_lib print_lib fs_lib disk_lib drivers_lib lwext4_lib ext4_print_adapter_lib gop_lib gcc)
+add_library(ui_lib STATIC src/ui/window.cpp src/ui/widgets/button.cpp src/ui/widgets/text.cpp)
+target_include_directories(ui_lib PUBLIC include src/external)
+
+target_link_libraries(kernel.elf PRIVATE -Wl,--start-group kernel_lib print_lib fs_lib disk_lib drivers_lib lwext4_lib gop_lib ui_lib gcc -Wl,--end-group)
 target_include_directories(kernel.elf PRIVATE src/external)
 
 set_target_properties(kernel.elf PROPERTIES LINK_FLAGS "-m64 -nostdlib -T ${CMAKE_SOURCE_DIR}/src/arch/x86_64/boot/linker.ld -no-pie -fno-pie -z max-page-size=0x1000")
@@ -108,12 +109,12 @@ add_custom_target(MyOS ALL DEPENDS ${CMAKE_BINARY_DIR}/os-image.bin)
 
 # Root Filesystem Image
 add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/rootfs.img
+    OUTPUT ${CMAKE_SOURCE_DIR}/build/rootfs.img
     COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/run.sh --build-only
     DEPENDS ${CMAKE_SOURCE_DIR}/scripts/run.sh
     COMMENT "Creating Root Filesystem Image"
 )
-add_custom_target(rootfs DEPENDS ${CMAKE_BINARY_DIR}/rootfs.img)
+add_custom_target(rootfs DEPENDS ${CMAKE_SOURCE_DIR}/build/rootfs.img)
 
 # Update the 32-bit flags to 64-bit
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -ffreestanding -mno-red-zone -fno-stack-protector -g")
@@ -276,7 +277,7 @@ add_custom_target(run
 add_custom_target(run-grub
     COMMAND qemu-system-i386
         -cdrom ${CMAKE_BINARY_DIR}/myos.iso
-        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
+        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
         -m 512 -vga std -serial stdio
     DEPENDS iso rootfs
     COMMENT "Running MyOS (GRUB BIOS) in QEMU"
@@ -287,9 +288,10 @@ add_custom_target(run-grub-uefi
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
         -cdrom ${CMAKE_BINARY_DIR}/myos.iso
-        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
+        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
         -audiodev pa,id=snd0
         -device intel-hda,debug=3 -device hda-duplex,audiodev=snd0
+        -device qemu-xhci
         -m 512 -vga std -serial stdio
     DEPENDS iso rootfs
     COMMENT "Running MyOS (GRUB UEFI) in QEMU with HDA debug"
@@ -300,7 +302,7 @@ add_custom_target(run-grub-uefi-ac97
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
         -cdrom ${CMAKE_BINARY_DIR}/myos.iso
-        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
+        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
         -audiodev pa,id=snd0
         -device AC97,audiodev=snd0
         -m 512 -vga std -serial stdio
@@ -313,7 +315,7 @@ add_custom_target(run-uefi
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
         -drive format=raw,file=${EFI_BUILD_DIR}/uefi.img,index=0,media=disk,if=ide
-        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
+        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
         -m 512 -vga std -serial stdio
     DEPENDS kernel_efi rootfs
     COMMENT "Running MyOS (Pure UEFI) in QEMU"

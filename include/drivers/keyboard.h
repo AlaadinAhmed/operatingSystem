@@ -1,7 +1,6 @@
-#ifndef KEYBOARD_H
-#define KEYBOARD_H
-
+#pragma once
+#include <cstdint>
 void init_keyboard();
 char kgetchar();
-
-#endif
+void keyboard_on_interrupt();
+void keyboard_handler(uint8_t scancode, uint8_t &state);

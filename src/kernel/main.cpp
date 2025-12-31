@@ -1,9 +1,10 @@
+#include "arch/x86_64/gdt.h"
+#include "arch/x86_64/idt.h"
 #include "common/boot_info.h"
+#include "drivers/pic.h"
 #include "graphics/framebuffer.h"
 #include "print/print.h"
 #include "system/system.h"
-#include "arch/x86_64/gdt.h"
-#include "arch/x86_64/idt.h"
 #include <cstdint>
 
 extern "C" void (*__init_array_start[])();
@@ -29,7 +30,7 @@ extern "C" void main(uint32_t magic, uint64_t addr) {
   kprintf("Kernel: Entered main\n");
 
   // --- Early Boot Initialization ---
-  
+
   // Clear BSS for non-UEFI boot (EFI loader already handles it)
   if (magic != UEFI_MAGIC) {
     for (uint8_t *p = __bss_start; p < __bss_end; p++) {
@@ -44,7 +45,7 @@ extern "C" void main(uint32_t magic, uint64_t addr) {
     uint64_t offset = MAIN_OFFSET - LINK_BASE;
     uint64_t current_main_addr = (uint64_t)main;
     uint64_t image_base = current_main_addr - offset;
-    
+
     for (void (**p)() = __init_array_start; p < __init_array_end; p++) {
       uint64_t func_ptr = (uint64_t)*p;
       if (func_ptr > 0) {
@@ -65,6 +66,10 @@ extern "C" void main(uint32_t magic, uint64_t addr) {
   init_gdt();
   kprintf("Kernel: GDT Initialized\n");
 
+  kprintf("Kernel: Initializing PIC...\n");
+  init_pic();
+  kprintf("Kernel: PIC Initialized\n");
+
   kprintf("Kernel: Initializing IDT...\n");
   init_idt();
   kprintf("Kernel: IDT Initialized\n");
@@ -72,6 +77,7 @@ extern "C" void main(uint32_t magic, uint64_t addr) {
   // --- System Startup ---
   System system;
   system.Initialize();
+  asm volatile("sti");
   system.Run();
   system.Shutdown();
 
