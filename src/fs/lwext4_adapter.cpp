@@ -98,7 +98,7 @@ struct ext4_blockdev* fs::get_lwext4_blockdev() {
     iface.ph_bsize = 512;
     iface.ph_bcnt = (g_detected_disk->m_partition_size > 0) 
                     ? (g_detected_disk->m_partition_size / 512) 
-                    : (28672 * 2);
+                    : (65536 * 2); // 64MB fallback
     iface.ph_bbuf = ph_bbuf;
     iface.lock = disk_lock;
     iface.unlock = disk_unlock;
@@ -107,7 +107,7 @@ struct ext4_blockdev* fs::get_lwext4_blockdev() {
     blockdev.part_offset = 0;
     blockdev.part_size = (g_detected_disk->m_partition_size > 0) 
                          ? g_detected_disk->m_partition_size 
-                         : (28672 * 1024);
+                         : (65536 * 1024); // 64MB fallback
 
     // Initialize block cache
     struct ext4_bcache *bc = &bc_static;

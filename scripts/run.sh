@@ -41,8 +41,8 @@ fi
 
 
 echo "Creating Root Filesystem Image..."
-# Create 28MB ext4 image in build folder
-dd if=/dev/zero of="$BUILD_DIR/rootfs.img" bs=1k count=28672 status=none
+# Create 64MB ext4 image in build folder
+dd if=/dev/zero of="$BUILD_DIR/rootfs.img" bs=1k count=65536 status=none
 /sbin/mke2fs -q -t ext4 -b 4096 -O ^64bit,^huge_file,^metadata_csum,^dir_nlink,^extra_isize,^orphan_file "$BUILD_DIR/rootfs.img"
 
 # Create directory structure in the filesystem

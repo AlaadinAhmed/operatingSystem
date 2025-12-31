@@ -56,6 +56,12 @@ public:
     IntelHDA(uint64_t base_addr);
     void Initialize();
     void PlayTestSound();
+    
+    // Audio Player API
+    void StartStream(uint16_t format);
+    void StopStream();
+    uint32_t GetStreamPos();
+    int16_t* GetBuffer(int index);
 
 private:
     uint64_t m_base;

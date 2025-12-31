@@ -57,7 +57,7 @@ struct BlockHeader {
 static const size_t HEADER_SIZE = sizeof(BlockHeader);
 static const size_t MIN_BLOCK_SIZE = 16; // Minimum allocation size
 static const size_t HEAP_START = 0x200000;  // 2MB
-static const size_t HEAP_END = 0x2000000;   // 32MB (increased from 16MB)
+static const size_t HEAP_END = 0x10000000;   // 256MB (increased from 32MB)
 
 static BlockHeader* heap_start = nullptr;
 static bool heap_initialized = false;

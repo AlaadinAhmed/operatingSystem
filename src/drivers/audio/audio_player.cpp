@@ -96,6 +96,10 @@ static bool fill_buffer(int buffer_index) {
   uint64_t frames_to_read = HDA_BUFFER_FRAMES;
   uint64_t frames_read = drwav_read_pcm_frames_s16(&s_state.wav, frames_to_read, buffer);
   
+  // DEBUG: Print first few samples of decoded data
+  kprintf("fill_buffer(%d): read %d frames, samples: %d %d %d %d\n", 
+          buffer_index, (int)frames_read, buffer[0], buffer[1], buffer[2], buffer[3]);
+  
   if (frames_read < frames_to_read) {
       // End of file
       s_state.playing = false;

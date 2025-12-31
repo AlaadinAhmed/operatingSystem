@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 project(MyOS)
 
-# Redirect build artifacts to build/ folder
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
+# Build artifacts go to CMAKE_BINARY_DIR (the directory where cmake is run from)
+# For out-of-source builds: cd build && cmake .. && make
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 set(CMAKE_ASM_NASM_OBJECT_FORMAT elf64)
 enable_language(ASM_NASM)
@@ -18,9 +19,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_D
 
 # Bootloader (BIOS Custom)
 add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/build/boot.bin
-    COMMAND mkdir -p ${CMAKE_SOURCE_DIR}/build
-    COMMAND nasm -f bin -o ${CMAKE_SOURCE_DIR}/build/boot.bin ${CMAKE_SOURCE_DIR}/src/arch/i386/boot/boot.asm
+    OUTPUT ${CMAKE_BINARY_DIR}/boot.bin
+    COMMAND mkdir -p ${CMAKE_BINARY_DIR}
+    COMMAND nasm -f bin -o ${CMAKE_BINARY_DIR}/boot.bin ${CMAKE_SOURCE_DIR}/src/arch/i386/boot/boot.asm
     DEPENDS ${CMAKE_SOURCE_DIR}/src/arch/i386/boot/boot.asm
 
     COMMENT "Assembling bootloader"
@@ -28,8 +29,8 @@ add_custom_command(
 
 # Loader (BIOS Custom)
 add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/build/loader.bin
-    COMMAND nasm -f bin -o ${CMAKE_SOURCE_DIR}/build/loader.bin ${CMAKE_SOURCE_DIR}/src/arch/i386/boot/loader.asm
+    OUTPUT ${CMAKE_BINARY_DIR}/loader.bin
+    COMMAND nasm -f bin -o ${CMAKE_BINARY_DIR}/loader.bin ${CMAKE_SOURCE_DIR}/src/arch/i386/boot/loader.asm
     DEPENDS ${CMAKE_SOURCE_DIR}/src/arch/i386/boot/loader.asm
 
     COMMENT "Assembling loader"
@@ -44,7 +45,7 @@ target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1 CONFIG_USE
 target_include_directories(lwext4_lib PUBLIC src/external/lwext4/include)
 
 # Drivers Library
-add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp)
+add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp src/drivers/audio/audio_player.cpp)
 target_include_directories(drivers_lib PUBLIC include/drivers src/external)
 
 # FS Library
@@ -68,7 +69,7 @@ add_library(disk_lib STATIC src/disk/disk.cpp)
 target_include_directories(disk_lib PUBLIC include/disk)
 
 # Kernel Library
-add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp)
+add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm)
 target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include)
 
 
@@ -88,31 +89,31 @@ set_target_properties(kernel.elf PROPERTIES LINK_FLAGS "-m64 -nostdlib -T ${CMAK
 
 # Extract Binary
 add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/build/kernel.bin
-    COMMAND objcopy -O binary $<TARGET_FILE:kernel.elf> ${CMAKE_SOURCE_DIR}/build/kernel.bin
+    OUTPUT ${CMAKE_BINARY_DIR}/kernel.bin
+    COMMAND objcopy -O binary $<TARGET_FILE:kernel.elf> ${CMAKE_BINARY_DIR}/kernel.bin
     DEPENDS kernel.elf
     COMMENT "Extracting kernel binary"
 )
 
 # Concatenate and Zero Pad (Create Floppy Image)
 add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/build/os-image.bin
-    COMMAND cat ${CMAKE_SOURCE_DIR}/build/boot.bin ${CMAKE_SOURCE_DIR}/build/loader.bin ${CMAKE_SOURCE_DIR}/build/kernel.bin > ${CMAKE_SOURCE_DIR}/build/os-image.bin
-    COMMAND truncate -s 1440k ${CMAKE_SOURCE_DIR}/build/os-image.bin
-    DEPENDS ${CMAKE_SOURCE_DIR}/build/boot.bin ${CMAKE_SOURCE_DIR}/build/loader.bin ${CMAKE_SOURCE_DIR}/build/kernel.bin
+    OUTPUT ${CMAKE_BINARY_DIR}/os-image.bin
+    COMMAND cat ${CMAKE_BINARY_DIR}/boot.bin ${CMAKE_BINARY_DIR}/loader.bin ${CMAKE_BINARY_DIR}/kernel.bin > ${CMAKE_BINARY_DIR}/os-image.bin
+    COMMAND truncate -s 1440k ${CMAKE_BINARY_DIR}/os-image.bin
+    DEPENDS ${CMAKE_BINARY_DIR}/boot.bin ${CMAKE_BINARY_DIR}/loader.bin ${CMAKE_BINARY_DIR}/kernel.bin
     COMMENT "Creating OS image"
 )
 
-add_custom_target(MyOS ALL DEPENDS ${CMAKE_SOURCE_DIR}/build/os-image.bin)
+add_custom_target(MyOS ALL DEPENDS ${CMAKE_BINARY_DIR}/os-image.bin)
 
 # Root Filesystem Image
 add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/build/rootfs.img
+    OUTPUT ${CMAKE_BINARY_DIR}/rootfs.img
     COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/run.sh --build-only
     DEPENDS ${CMAKE_SOURCE_DIR}/scripts/run.sh
     COMMENT "Creating Root Filesystem Image"
 )
-add_custom_target(rootfs DEPENDS ${CMAKE_SOURCE_DIR}/build/rootfs.img)
+add_custom_target(rootfs DEPENDS ${CMAKE_BINARY_DIR}/rootfs.img)
 
 # Update the 32-bit flags to 64-bit
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -ffreestanding -mno-red-zone -fno-stack-protector -g")
@@ -121,7 +122,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64 -ffreestanding -mno-red-zone -fno-stack
 # UEFI BUILD (using locally compiled gnu-efi)
 # =============================================================================
 set(GNU_EFI_DIR ${CMAKE_SOURCE_DIR}/src/external/gnu-efi)
-set(EFI_BUILD_DIR ${CMAKE_SOURCE_DIR}/build/efi)
+set(EFI_BUILD_DIR ${CMAKE_BINARY_DIR}/efi)
 set(EFI_ENTRY_SRC ${CMAKE_SOURCE_DIR}/src/arch/x86_64/boot/efi_entry.cpp)
 
 # UEFI compiler flags (must match gnu-efi)
@@ -162,8 +163,8 @@ add_custom_command(
 add_custom_command(
     OUTPUT ${EFI_BUILD_DIR}/kernel_bin.o
     COMMAND mkdir -p ${EFI_BUILD_DIR}
-    COMMAND cd ${CMAKE_SOURCE_DIR}/build && objcopy -I binary -O elf64-x86-64 -B i386:x86-64 kernel.bin ${EFI_BUILD_DIR}/kernel_bin.o
-    DEPENDS ${CMAKE_SOURCE_DIR}/build/kernel.bin
+    COMMAND cd ${CMAKE_BINARY_DIR} && objcopy -I binary -O elf64-x86-64 -B i386:x86-64 kernel.bin ${EFI_BUILD_DIR}/kernel_bin.o
+    DEPENDS ${CMAKE_BINARY_DIR}/kernel.bin
     COMMENT "Embedding kernel binary into object file"
 )
 
@@ -202,8 +203,8 @@ add_custom_command(
     COMMAND mmd -i ${EFI_BUILD_DIR}/uefi.img ::/EFI
     COMMAND mmd -i ${EFI_BUILD_DIR}/uefi.img ::/EFI/BOOT
     COMMAND mcopy -i ${EFI_BUILD_DIR}/uefi.img ${EFI_BUILD_DIR}/myos.efi ::/EFI/BOOT/BOOTX64.EFI
-    COMMAND mcopy -i ${EFI_BUILD_DIR}/uefi.img ${CMAKE_SOURCE_DIR}/build/kernel.bin ::/kernel.bin
-    DEPENDS ${EFI_BUILD_DIR}/myos.efi ${CMAKE_SOURCE_DIR}/build/kernel.bin
+    COMMAND mcopy -i ${EFI_BUILD_DIR}/uefi.img ${CMAKE_BINARY_DIR}/kernel.bin ::/kernel.bin
+    DEPENDS ${EFI_BUILD_DIR}/myos.efi ${CMAKE_BINARY_DIR}/kernel.bin
     COMMENT "Creating UEFI boot image"
 )
 
@@ -212,37 +213,37 @@ add_custom_target(kernel_efi DEPENDS ${EFI_BUILD_DIR}/uefi.img)
 # =============================================================================
 # GRUB ISO (supports both BIOS and UEFI boot via GRUB)
 # =============================================================================
-set(ISO_DIR ${CMAKE_SOURCE_DIR}/build/iso)
+set(ISO_DIR ${CMAKE_BINARY_DIR}/iso)
 set(GRUB_CFG ${CMAKE_SOURCE_DIR}/resources/grub.cfg)
 
 # Create GRUB bootable ISO
 # Create GRUB bootable ISO
 add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/build/myos.iso
+    OUTPUT ${CMAKE_BINARY_DIR}/myos.iso
     COMMAND mkdir -p ${ISO_DIR}/boot/grub
     COMMAND mkdir -p ${ISO_DIR}/EFI/myos
     COMMAND cp $<TARGET_FILE:kernel.elf> ${ISO_DIR}/boot/kernel.elf
     COMMAND cp ${GRUB_CFG} ${ISO_DIR}/boot/grub/grub.cfg
     COMMAND cp ${EFI_BUILD_DIR}/myos.efi ${ISO_DIR}/EFI/myos/myos.efi
-    COMMAND cp ${CMAKE_SOURCE_DIR}/build/kernel.bin ${ISO_DIR}/kernel.bin
-    COMMAND grub-mkrescue -o ${CMAKE_SOURCE_DIR}/build/myos.iso ${ISO_DIR}
-    DEPENDS kernel.elf ${GRUB_CFG} ${EFI_BUILD_DIR}/myos.efi ${CMAKE_SOURCE_DIR}/build/kernel.bin
+    COMMAND cp ${CMAKE_BINARY_DIR}/kernel.bin ${ISO_DIR}/kernel.bin
+    COMMAND grub-mkrescue -o ${CMAKE_BINARY_DIR}/myos.iso ${ISO_DIR}
+    DEPENDS kernel.elf ${GRUB_CFG} ${EFI_BUILD_DIR}/myos.efi ${CMAKE_BINARY_DIR}/kernel.bin
     COMMENT "Creating GRUB bootable ISO (BIOS + UEFI)"
 )
-add_custom_target(iso DEPENDS ${CMAKE_SOURCE_DIR}/build/myos.iso)
+add_custom_target(iso DEPENDS ${CMAKE_BINARY_DIR}/myos.iso)
 
 # =============================================================================
 # BUILD TARGETS (explicit targets for each boot method)
 # =============================================================================
 # Build BIOS custom bootloader image
 add_custom_target(build-custom
-    DEPENDS ${CMAKE_SOURCE_DIR}/build/os-image.bin
+    DEPENDS ${CMAKE_BINARY_DIR}/os-image.bin
     COMMENT "Building BIOS custom bootloader image"
 )
 
 # Build GRUB ISO
 add_custom_target(build-grub
-    DEPENDS ${CMAKE_SOURCE_DIR}/build/myos.iso
+    DEPENDS ${CMAKE_BINARY_DIR}/myos.iso
     COMMENT "Building GRUB bootable ISO"
 )
 
@@ -264,8 +265,8 @@ add_custom_target(build-all
 # Run with BIOS custom bootloader (floppy image)
 add_custom_target(run
     COMMAND qemu-system-i386
-        -fda ${CMAKE_SOURCE_DIR}/build/os-image.bin
-        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
+        -fda ${CMAKE_BINARY_DIR}/os-image.bin
+        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
         -m 512 -vga std -serial stdio
     DEPENDS MyOS rootfs
     COMMENT "Running MyOS (BIOS Custom) in QEMU"
@@ -274,8 +275,8 @@ add_custom_target(run
 # Run with GRUB (ISO, BIOS mode)
 add_custom_target(run-grub
     COMMAND qemu-system-i386
-        -cdrom ${CMAKE_SOURCE_DIR}/build/myos.iso
-        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
+        -cdrom ${CMAKE_BINARY_DIR}/myos.iso
+        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
         -m 512 -vga std -serial stdio
     DEPENDS iso rootfs
     COMMENT "Running MyOS (GRUB BIOS) in QEMU"
@@ -285,8 +286,8 @@ add_custom_target(run-grub
 add_custom_target(run-grub-uefi
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
-        -cdrom ${CMAKE_SOURCE_DIR}/build/myos.iso
-        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
+        -cdrom ${CMAKE_BINARY_DIR}/myos.iso
+        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
         -audiodev pa,id=snd0
         -device intel-hda,debug=3 -device hda-duplex,audiodev=snd0
         -m 512 -vga std -serial stdio
@@ -298,8 +299,8 @@ add_custom_target(run-grub-uefi
 add_custom_target(run-grub-uefi-ac97
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
-        -cdrom ${CMAKE_SOURCE_DIR}/build/myos.iso
-        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
+        -cdrom ${CMAKE_BINARY_DIR}/myos.iso
+        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
         -audiodev pa,id=snd0
         -device AC97,audiodev=snd0
         -m 512 -vga std -serial stdio
@@ -312,7 +313,7 @@ add_custom_target(run-uefi
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
         -drive format=raw,file=${EFI_BUILD_DIR}/uefi.img,index=0,media=disk,if=ide
-        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
+        -drive format=raw,file=${CMAKE_BINARY_DIR}/rootfs.img,index=1,media=disk,if=ide
         -m 512 -vga std -serial stdio
     DEPENDS kernel_efi rootfs
     COMMENT "Running MyOS (Pure UEFI) in QEMU"
@@ -323,23 +324,23 @@ add_custom_target(run-uefi
 # =============================================================================
 # Create VMware virtual machine configuration
 add_custom_target(vmware-config
-    COMMAND qemu-img convert -f raw -O vmdk ${CMAKE_SOURCE_DIR}/build/rootfs.img ${CMAKE_SOURCE_DIR}/build/rootfs.vmdk 2>/dev/null || true
+    COMMAND qemu-img convert -f raw -O vmdk ${CMAKE_BINARY_DIR}/rootfs.img ${CMAKE_BINARY_DIR}/rootfs.vmdk 2>/dev/null || true
     COMMAND ${CMAKE_COMMAND} -E echo "Creating VMware configuration..."
-    COMMAND ${CMAKE_COMMAND} -E echo ".encoding = \"UTF-8\"" > ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "config.version = \"8\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "virtualHW.version = \"18\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx  
-    COMMAND ${CMAKE_COMMAND} -E echo "memsize = \"1024\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "displayName = \"MyOS\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "guestOS = \"other-64\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.present = \"TRUE\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.deviceType = \"cdrom-image\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.fileName = \"myos.iso\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "ide0:1.present = \"TRUE\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "ide0:1.fileName = \"rootfs.vmdk\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "firmware = \"efi\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "sound.present = \"TRUE\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "sound.virtualDev = \"hdaudio\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "sound.autoDetect = \"TRUE\"" >> ${CMAKE_SOURCE_DIR}/build/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo ".encoding = \"UTF-8\"" > ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "config.version = \"8\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "virtualHW.version = \"18\"" >> ${CMAKE_BINARY_DIR}/myos.vmx  
+    COMMAND ${CMAKE_COMMAND} -E echo "memsize = \"1024\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "displayName = \"MyOS\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "guestOS = \"other-64\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.present = \"TRUE\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.deviceType = \"cdrom-image\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.fileName = \"myos.iso\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "ide0:1.present = \"TRUE\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "ide0:1.fileName = \"rootfs.vmdk\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "firmware = \"efi\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "sound.present = \"TRUE\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "sound.virtualDev = \"hdaudio\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "sound.autoDetect = \"TRUE\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
     DEPENDS iso rootfs
     COMMENT "Creating VMware configuration files"
 )
@@ -347,7 +348,7 @@ add_custom_target(vmware-config
 # Run in VMware Player (with XKEYBOARD fix for Linux)
 add_custom_target(run-vmware
     COMMAND setxkbmap -option ""
-    COMMAND vmplayer ${CMAKE_SOURCE_DIR}/build/myos.vmx
+    COMMAND vmplayer ${CMAKE_BINARY_DIR}/myos.vmx
     DEPENDS vmware-config
     COMMENT "Running MyOS in VMware Player (Intel HD Audio)"
 )
@@ -372,7 +373,7 @@ add_custom_target(install-grub-uefi
     COMMAND echo "Installing MyOS To GRUB..."
     COMMAND sudo mkdir -p /boot/myos
     COMMAND sudo cp ${EFI_BUILD_DIR}/myos.efi /boot/myos/myos.efi
-    COMMAND sudo cp ${CMAKE_SOURCE_DIR}/build/kernel.bin /boot/myos/kernel.bin
+    COMMAND sudo cp ${CMAKE_BINARY_DIR}/kernel.bin /boot/myos/kernel.bin
     COMMAND echo "Installed: /boot/myos/myos.efi"
     COMMAND echo "Installed: /boot/myos/kernel.bin"
     COMMAND echo ""
@@ -390,11 +391,11 @@ add_custom_target(install-grub-uefi
 # Create bootable USB image
 add_custom_target(install-usb
     COMMAND echo "Creating bootable USB image at build/myos-uefi-usb.img..."
-    COMMAND dd if=/dev/zero of=${CMAKE_SOURCE_DIR}/build/myos-uefi-usb.img bs=1M count=64 status=progress
-    COMMAND /sbin/mkfs.vfat -F 32 ${CMAKE_SOURCE_DIR}/build/myos-uefi-usb.img
-    COMMAND mmd -i ${CMAKE_SOURCE_DIR}/build/myos-uefi-usb.img ::/EFI
-    COMMAND mmd -i ${CMAKE_SOURCE_DIR}/build/myos-uefi-usb.img ::/EFI/BOOT
-    COMMAND mcopy -i ${CMAKE_SOURCE_DIR}/build/myos-uefi-usb.img ${EFI_BUILD_DIR}/myos.efi ::/EFI/BOOT/BOOTX64.EFI
+    COMMAND dd if=/dev/zero of=${CMAKE_BINARY_DIR}/myos-uefi-usb.img bs=1M count=64 status=progress
+    COMMAND /sbin/mkfs.vfat -F 32 ${CMAKE_BINARY_DIR}/myos-uefi-usb.img
+    COMMAND mmd -i ${CMAKE_BINARY_DIR}/myos-uefi-usb.img ::/EFI
+    COMMAND mmd -i ${CMAKE_BINARY_DIR}/myos-uefi-usb.img ::/EFI/BOOT
+    COMMAND mcopy -i ${CMAKE_BINARY_DIR}/myos-uefi-usb.img ${EFI_BUILD_DIR}/myos.efi ::/EFI/BOOT/BOOTX64.EFI
     COMMAND echo ""
     COMMAND echo "USB image created: build/myos-uefi-usb.img"
     COMMAND echo "Write to USB: sudo dd if=build/myos-uefi-usb.img of=/dev/sdX bs=4M status=progress"

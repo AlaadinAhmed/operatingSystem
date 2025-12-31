@@ -2,6 +2,8 @@
 #include "graphics/framebuffer.h"
 #include "print/print.h"
 #include "system/system.h"
+#include "arch/x86_64/gdt.h"
+#include "arch/x86_64/idt.h"
 #include <cstdint>
 
 extern "C" void (*__init_array_start[])();
@@ -57,6 +59,15 @@ extern "C" void main(uint32_t magic, uint64_t addr) {
 
   // Initialize framebuffer
   framebuffer::init_framebuffer(magic, addr);
+
+  // Initialize GDT and IDT
+  kprintf("Kernel: Initializing GDT...\n");
+  init_gdt();
+  kprintf("Kernel: GDT Initialized\n");
+
+  kprintf("Kernel: Initializing IDT...\n");
+  init_idt();
+  kprintf("Kernel: IDT Initialized\n");
 
   // --- System Startup ---
   System system;

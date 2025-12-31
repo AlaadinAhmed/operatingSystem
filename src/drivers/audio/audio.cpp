@@ -153,3 +153,34 @@ void play_test_sound() {
         g_ac97_driver->PlayTestSound();
     }
 }
+
+int16_t* audio_get_buffer(int index) {
+    if (g_hda_driver) {
+        return g_hda_driver->GetBuffer(index);
+    }
+    return nullptr;
+}
+
+void audio_start_stream(uint16_t format) {
+    if (g_hda_driver) {
+        g_hda_driver->StartStream(format);
+    }
+}
+
+void audio_stop_stream() {
+    if (g_hda_driver) {
+        g_hda_driver->StopStream();
+    }
+}
+
+int audio_get_current_buffer() {
+    if (g_hda_driver) {
+        uint32_t pos = g_hda_driver->GetStreamPos();
+        // Total buffer is 8192 bytes.
+        // Buffer 0: 0-4095
+        // Buffer 1: 4096-8191
+        if (pos < 4096) return 0;
+        return 1;
+    }
+    return 0;
+}

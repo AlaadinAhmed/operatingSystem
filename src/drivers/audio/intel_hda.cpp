@@ -199,7 +199,11 @@ void IntelHDA::PlayTestSound() {
     timeout = 10000;
     while ((*ctl0 & 1) && --timeout > 0);
 
-    // Step 8: Unmute Codec
+    // Step 8: Configure Codec
+    // CRITICAL: Set Converter Format (Verb 0x2) on DAC node
+    // Format 0x4011 = 48kHz, 16-bit, Stereo
+    SendVerb(0, 0x2, 0x20000 | 0x4011); // Set Converter Format
+    
     SendVerb(0, 0x2, 0x70500); // Set Power State D0
     SendVerb(0, 0x2, 0xB07F);  // Unmute DAC
     SendVerb(0, 0x2, 0x70610); // Set Converter Stream 1, Channel 0
@@ -234,51 +238,50 @@ void IntelHDA::StartStream(uint16_t format) {
     
     // Flush cache
     __asm__ volatile("wbinvd");
-    __asm__ volatile("mfence"); // Memory fence for ordering
+    __asm__ volatile("mfence");
 
     uint64_t bdl_phys = (uint64_t)s_bdl;
 
-    volatile uint8_t* ctl0 = (volatile uint8_t*)(m_base + sd_offset + 0); // Bits 7:0: SRST, RUN
-    volatile uint8_t* ctl2 = (volatile uint8_t*)(m_base + sd_offset + 2); // Bits 23:16 (Stream ID)
+    volatile uint8_t* ctl0 = (volatile uint8_t*)(m_base + sd_offset + 0);
+    volatile uint8_t* ctl2 = (volatile uint8_t*)(m_base + sd_offset + 2);
     volatile uint8_t* sts = (volatile uint8_t*)(m_base + sd_offset + 3);
 
-    // Step 1: Stop the stream and enter reset
-    *ctl0 = 0; // Stop RUN, Clear SRST
-    for (volatile int i = 0; i < 10000; i++); // Small delay
+    // ===== CORRECT HDA STREAM RESET SEQUENCE =====
+    // Step 1: Stop the stream (clear RUN and SRST)
+    *ctl0 = 0;
+    for (volatile int i = 0; i < 10000; i++);
     
-    // Step 2: Set SRST (Enter Reset)
+    // Step 2: Enter reset (set SRST)
     *ctl0 = 1;
-    
-    // Step 3: Wait for SRST to be set (with timeout - QEMU workaround)
     int timeout = 10000;
     while (!(*ctl0 & 1) && --timeout > 0);
     
-    // Step 4: Clear Status
-    *sts = 0x1C; // Clear status
-
-    // Step 5: Setup Registers
-    RegWrite32(sd_offset + HDA_SD_BDLPL, (uint32_t)bdl_phys);
-    RegWrite32(sd_offset + HDA_SD_BDLPU, (uint32_t)(bdl_phys >> 32));
-    RegWrite16(sd_offset + HDA_SD_LVI, 1); // Last Valid Index = 1
-    RegWrite32(sd_offset + HDA_SD_CBL, 8192); // Total buffer length
-    RegWrite16(sd_offset + HDA_SD_FMT, format); // Use provided format
-    *ctl2 = (1 << 4); // Stream ID 1
-
-    // Step 6: Clear SRST (Exit Reset)
+    // Step 3: Exit reset (clear SRST) - MUST do this BEFORE configuring!
     *ctl0 = 0;
-    
-    // Step 7: Wait for SRST to be clear (with timeout)
     timeout = 10000;
     while ((*ctl0 & 1) && --timeout > 0);
     
-    // Unmute (Assuming already done in Init or PlayTestSound, but good to ensure)
-    SendVerb(0, 0x2, 0x70500); // D0
-    SendVerb(0, 0x2, 0xB07F);  // Unmute DAC
-    SendVerb(0, 0x2, 0x70610); // Stream 1
-    SendVerb(0, 0x4, 0xB07F);  // Unmute Pin
-    SendVerb(0, 0x4, 0x70740); // Enable Out
+    // Step 4: Now configure (stream is stopped but NOT in reset)
+    *sts = 0x1C; // Clear status bits
+    RegWrite32(sd_offset + HDA_SD_BDLPL, (uint32_t)bdl_phys);
+    RegWrite32(sd_offset + HDA_SD_BDLPU, (uint32_t)(bdl_phys >> 32));
+    RegWrite16(sd_offset + HDA_SD_LVI, 1);
+    RegWrite32(sd_offset + HDA_SD_CBL, 8192);
+    RegWrite16(sd_offset + HDA_SD_FMT, format);
+    *ctl2 = (1 << 4); // Stream ID 1
     
-    RegWrite8(sd_offset + HDA_SD_CTL, 2); // RUN
+    // Step 5: Configure Codec
+    SendVerb(0, 0x2, 0x20000 | format); // Set Converter Format
+    SendVerb(0, 0x2, 0x70500); // D0 - Power On
+    SendVerb(0, 0x2, 0xB07F);  // Unmute DAC
+    SendVerb(0, 0x2, 0x70610); // Set Stream ID 1, Channel 0
+    SendVerb(0, 0x4, 0xB07F);  // Unmute Pin
+    SendVerb(0, 0x4, 0x70740); // Enable Output
+    
+    kprintf("HDA: Starting stream with format 0x%x\n", format);
+    
+    // Step 6: Start the stream (set RUN bit)
+    *ctl0 = 2;
 }
 
 void IntelHDA::StopStream() {
