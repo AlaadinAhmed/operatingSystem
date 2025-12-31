@@ -1,6 +1,0 @@
--I/usr/include/efi
--I/usr/include/efi/x86_64
--I/usr/include/efi/protocol
--ffreestanding
--fshort-wchar
--mabi=ms_abi
