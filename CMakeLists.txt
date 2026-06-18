@@ -45,7 +45,7 @@ target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1 CONFIG_USE
 target_include_directories(lwext4_lib PUBLIC src/external/lwext4/include)
 
 # Drivers Library
-add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp src/drivers/audio/audio_player.cpp src/drivers/pic.cpp src/drivers/bus/usb.cpp)
+add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp src/drivers/audio/audio_player.cpp src/drivers/pic.cpp src/drivers/bus/usb.cpp src/drivers/nvme/nvme.cpp)
 target_include_directories(drivers_lib PUBLIC include/drivers src/external src)
 
 # FS Library
@@ -188,9 +188,9 @@ add_custom_command(
 # Convert to PE format
 add_custom_command(
     OUTPUT ${EFI_BUILD_DIR}/myos.efi
-    COMMAND objcopy -j .text -j .sdata -j .data -j .dynamic -j .rodata -j .rel
+    COMMAND objcopy -I elf64-x86-64 -j .text -j .sdata -j .data -j .dynamic -j .rodata -j .rel
         -j .rela -j .rel.* -j .rela.* -j .reloc
-        --target=efi-app-x86_64
+        -O efi-app-x86_64
         ${EFI_BUILD_DIR}/myos.so ${EFI_BUILD_DIR}/myos.efi
     DEPENDS ${EFI_BUILD_DIR}/myos.so
     COMMENT "Converting to PE/EFI format"
@@ -220,18 +220,18 @@ set(GRUB_CFG ${CMAKE_SOURCE_DIR}/resources/grub.cfg)
 # Create GRUB bootable ISO
 # Create GRUB bootable ISO
 add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/myos.iso
+    OUTPUT ${CMAKE_BINARY_DIR}/myos.so
     COMMAND mkdir -p ${ISO_DIR}/boot/grub
     COMMAND mkdir -p ${ISO_DIR}/EFI/myos
     COMMAND cp $<TARGET_FILE:kernel.elf> ${ISO_DIR}/boot/kernel.elf
     COMMAND cp ${GRUB_CFG} ${ISO_DIR}/boot/grub/grub.cfg
     COMMAND cp ${EFI_BUILD_DIR}/myos.efi ${ISO_DIR}/EFI/myos/myos.efi
     COMMAND cp ${CMAKE_BINARY_DIR}/kernel.bin ${ISO_DIR}/kernel.bin
-    COMMAND grub-mkrescue -o ${CMAKE_BINARY_DIR}/myos.iso ${ISO_DIR}
+    COMMAND grub-mkrescue -o ${CMAKE_BINARY_DIR}/myos.so ${ISO_DIR}
     DEPENDS kernel.elf ${GRUB_CFG} ${EFI_BUILD_DIR}/myos.efi ${CMAKE_BINARY_DIR}/kernel.bin
     COMMENT "Creating GRUB bootable ISO (BIOS + UEFI)"
 )
-add_custom_target(iso DEPENDS ${CMAKE_BINARY_DIR}/myos.iso)
+add_custom_target(iso DEPENDS ${CMAKE_BINARY_DIR}/myos.so)
 
 # =============================================================================
 # BUILD TARGETS (explicit targets for each boot method)
@@ -244,7 +244,7 @@ add_custom_target(build-custom
 
 # Build GRUB ISO
 add_custom_target(build-grub
-    DEPENDS ${CMAKE_BINARY_DIR}/myos.iso
+    DEPENDS ${CMAKE_BINARY_DIR}/myos.so
     COMMENT "Building GRUB bootable ISO"
 )
 
@@ -276,7 +276,7 @@ add_custom_target(run
 # Run with GRUB (ISO, BIOS mode)
 add_custom_target(run-grub
     COMMAND qemu-system-i386
-        -cdrom ${CMAKE_BINARY_DIR}/myos.iso
+        -cdrom ${CMAKE_BINARY_DIR}/myos.so
         -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
         -m 512 -vga std -serial stdio
     DEPENDS iso rootfs
@@ -287,7 +287,7 @@ add_custom_target(run-grub
 add_custom_target(run-grub-uefi
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
-        -cdrom ${CMAKE_BINARY_DIR}/myos.iso
+        -cdrom ${CMAKE_BINARY_DIR}/myos.so
         -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
         -audiodev pa,id=snd0
         -device intel-hda,debug=3 -device hda-duplex,audiodev=snd0
@@ -301,7 +301,7 @@ add_custom_target(run-grub-uefi
 add_custom_target(run-grub-uefi-ac97
     COMMAND qemu-system-x86_64
         -bios /usr/share/edk2/x64/OVMF.4m.fd
-        -cdrom ${CMAKE_BINARY_DIR}/myos.iso
+        -cdrom ${CMAKE_BINARY_DIR}/myos.so
         -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide
         -audiodev pa,id=snd0
         -device AC97,audiodev=snd0
@@ -336,7 +336,7 @@ add_custom_target(vmware-config
     COMMAND ${CMAKE_COMMAND} -E echo "guestOS = \"other-64\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
     COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.present = \"TRUE\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
     COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.deviceType = \"cdrom-image\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
-    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.fileName = \"myos.iso\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND ${CMAKE_COMMAND} -E echo "ide0:0.fileName = \"myos.so\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
     COMMAND ${CMAKE_COMMAND} -E echo "ide0:1.present = \"TRUE\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
     COMMAND ${CMAKE_COMMAND} -E echo "ide0:1.fileName = \"rootfs.vmdk\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
     COMMAND ${CMAKE_COMMAND} -E echo "firmware = \"efi\"" >> ${CMAKE_BINARY_DIR}/myos.vmx
