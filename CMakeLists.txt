@@ -65,7 +65,7 @@ add_library(gop_lib STATIC src/drivers/gop/gop.cpp)
 target_include_directories(gop_lib PUBLIC include/drivers/gop)
 
 # Disk Library
-add_library(disk_lib STATIC src/disk/disk.cpp)
+add_library(disk_lib STATIC src/disk/disk.cpp src/disk/nvme_disk.cpp)
 target_include_directories(disk_lib PUBLIC include/disk)
 
 # Kernel Library
@@ -320,7 +320,26 @@ add_custom_target(run-uefi
     DEPENDS kernel_efi rootfs
     COMMENT "Running MyOS (Pure UEFI) in QEMU"
 )
-
+# Run with pure UEFI + Virtual NVMe PCIe Device
+add_custom_target(run-nvme
+    COMMAND qemu-system-x86_64
+        -bios /usr/share/edk2/x64/OVMF.4m.fd
+        # 1. Your standard boot image (Keep as IDE or change to USB/NVMe depending on where your EFI lives)
+        -drive format=raw,file=${EFI_BUILD_DIR}/uefi.img,index=0,media=disk,if=ide
+        
+        # 2. Define the raw file backend for your root filesystem (Bypasses automatic controller attachment)
+        -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,if=none,id=nvme_disk0
+        
+        # 3. Create the physical PCIe NVMe Controller and plug the backend drive into it
+        -device nvme,serial=NVME_TEST_BOOT_0,drive=nvme_disk0,id=nvme_ctrl0
+        
+        # 4. System allocation resources
+        -m 512 
+        -vga std 
+        -serial stdio
+    DEPENDS kernel_efi rootfs
+    COMMENT "Running MyOS with NVMe Controller in QEMU"
+)
 # =============================================================================
 # VMWARE TARGETS
 # =============================================================================

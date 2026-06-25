@@ -61,11 +61,6 @@ void System::InitDrivers() {
 void System::Initialize() {
     kprintf("System: Starting...\n");
 
-    // Initialize test button
-    m_testButton = new Button(100, 30, 600, 100, "Click Me", 0x000000FF, 0xFFFDF0D5, 4, &m_robotoFontInfo,
-                              onTestButtonClick, 10, 0xFFFDF0);
-    m_compositor->addWindow(m_testButton);
-
     kprintf("System: Screen dimensions: %dx%d, pitch=%d\n", g_efi_boot_info.width, g_efi_boot_info.height,
             g_efi_boot_info.pitch);
 
@@ -81,21 +76,27 @@ void System::Initialize() {
 
     vga_clear_screen(0x003049); // Dark blue background
 
-    // Initialize filesystem
+    // Initialize drivers
+    InitDrivers();
+
+    // Initialize filesystem after storage discovery
     m_filesystemAvailable = InitFilesystem();
     if (!m_filesystemAvailable) {
         kprintf("System: Filesystem not available\n");
         return;
     }
 
-    // Initialize drivers
-    InitDrivers();
-
     m_robotoFontBuffer = LoadFont("Roboto-Regular.ttf", &m_robotoFontInfo);
     if (!m_robotoFontBuffer) {
         kprintf("System: Failed to load Roboto font\n");
         return;
     }
+
+    // Initialize test button after font data is ready.
+    m_testButton = new Button(100, 30, 600, 100, "Click Me", 0x000000FF, 0xFFFDF0D5, 4, &m_robotoFontInfo,
+                              onTestButtonClick, 10, 0xFFFDF0);
+    m_compositor->addWindow(m_testButton);
+
     // Initialize version label
     m_versionLabel = new Text(0, 400, "MyOS v0.1", 0xFFFFFFFF, 32.0f, &m_robotoFontInfo, 1024);
     m_versionLabel->setAlignment(Alignment::Center);
