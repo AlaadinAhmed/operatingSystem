@@ -9,6 +9,7 @@
 #include "print/print.h"
 #include "stb_truetype.h"
 #include "system/system.h"
+#include "timer/timer.h"
 #include "ui/widgets/text.h"
 #include <ext4.h>
 
@@ -45,7 +46,8 @@ System::System()
         m_debugLabels[i] = nullptr;
 
     framebuffer = vga_get_framebuffer();
-    vga_clear_buffer(framebuffer, 0x000000);
+    asm volatile("sfence" ::: "memory");
+    profile_void("vga clear buffer", vga_clear_buffer, framebuffer, 0x000000);
     m_currentPath[0] = '\0';
 }
 
@@ -74,7 +76,8 @@ void System::Initialize() {
         memset(m_backbuffer, 0, g_efi_boot_info.width * g_efi_boot_info.height * 4);
     }
 
-    vga_clear_screen(0x003049); // Dark blue background
+    profile_void("vga clear buffer", vga_clear_buffer, framebuffer, 0x003049);
+    asm volatile("sfence" ::: "memory");
 
     // Initialize drivers
     InitDrivers();

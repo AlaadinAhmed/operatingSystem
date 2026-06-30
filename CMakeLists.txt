@@ -72,7 +72,13 @@ target_include_directories(disk_lib PUBLIC include/disk)
 add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/graphics/font_renderer.cpp src/graphics/compositor.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm src/kernel/ext4_print_adapter.cpp)
 target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include src include/print)
 
+#Memory
+add_library(memory_lib STATIC src/mem/pmm.cpp src/mem/vmm.cpp)
+target_include_directories(memory_lib PUBLIC include/mem)
 
+#Timer
+add_library(timer_lib STATIC src/timer/timer.cpp)
+target_include_directories(timer_lib PUBLIC include/timer)
 
 
 # Kernel Executable (BIOS/UEFI)
@@ -81,7 +87,7 @@ add_executable(kernel.elf src/arch/x86_64/kernel/kernel_entry.asm)
 add_library(ui_lib STATIC src/ui/window.cpp src/ui/widgets/button.cpp src/ui/widgets/text.cpp)
 target_include_directories(ui_lib PUBLIC include src/external)
 
-target_link_libraries(kernel.elf PRIVATE -Wl,--start-group kernel_lib print_lib fs_lib disk_lib drivers_lib lwext4_lib gop_lib ui_lib gcc -Wl,--end-group)
+target_link_libraries(kernel.elf PRIVATE -Wl,--start-group kernel_lib print_lib fs_lib disk_lib drivers_lib lwext4_lib gop_lib ui_lib memory_lib timer_lib gcc -Wl,--end-group)
 target_include_directories(kernel.elf PRIVATE src/external)
 
 set_target_properties(kernel.elf PROPERTIES LINK_FLAGS "-m64 -nostdlib -T ${CMAKE_SOURCE_DIR}/src/arch/x86_64/boot/linker.ld -no-pie -fno-pie -z max-page-size=0x1000")
@@ -286,6 +292,7 @@ add_custom_target(run-grub
 # Run with GRUB (ISO, UEFI mode)
 add_custom_target(run-grub-uefi
     COMMAND qemu-system-x86_64
+        -enable-kvm
         -bios /usr/share/edk2/x64/OVMF.4m.fd
         -cdrom ${CMAKE_BINARY_DIR}/myos.so
         -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,index=1,media=disk,if=ide

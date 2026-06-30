@@ -1,24 +1,24 @@
 /* 64-bit linker script for UEFI kernel */
 ENTRY(efi_main)
 SECTIONS {
-    . = 0x100000;
+    . = 0xC0000000;
     __load_start = .;
     
-    .text : {
+    .text : AT(ADDR(.text) - 0xC0000000) {
         *(.text)
         *(.text.*)
         *(.rodata)
         *(.rodata.*)
     }
     
-    .data : {
+    .data : AT(ADDR(.data) - 0xC0000000) {
         *(.data)
         *(.data.*)
     }
     
     __load_end = .;
     
-    .init_array : {
+    .init_array : AT(ADDR(.init_array) - 0xC0000000){
         __init_array_start = .;
         *(.init_array)
         *(.init_array.*)
@@ -26,7 +26,7 @@ SECTIONS {
         __init_array_end = .;
     }
     
-    .bss : {
+    .bss : AT(ADDR(.bss) - 0xC0000000){
         __bss_start = .;
         *(.bss)
         *(.bss.*)

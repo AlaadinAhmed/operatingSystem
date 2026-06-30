@@ -17,6 +17,7 @@ struct InterruptFrame {
   uint64_t rbx;
   uint64_t rax;
   uint64_t rbp;
+  uint64_t vector;
   uint64_t error_code;
   uint64_t rip;
   uint64_t cs;
