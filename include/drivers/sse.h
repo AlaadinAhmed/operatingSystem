@@ -10,5 +10,6 @@
 
 void sse_memcpy(void* dest, const void* src, uint32_t size_in_bytes);
 void sse_clear_buffer(void* buffer, uint32_t size_in_bytes);
+void sse_fill_buffer32(void* buffer, uint32_t color, uint32_t count);
 
 #endif

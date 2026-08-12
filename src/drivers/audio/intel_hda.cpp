@@ -1,6 +1,8 @@
 #include "drivers/audio/intel_hda.h"
 #include "print/print.h"
 #include "memory/kmalloc.h"
+#include "memory/kmalloc.h"
+#include "mem/vmm.h"
 
 // Static Buffer Definitions
 uint32_t __attribute__((aligned(128))) IntelHDA::s_corb[256];
@@ -62,14 +64,14 @@ void IntelHDA::InitCORBRIRB() {
     while (RegRead8(HDA_REG_RIRBCTL) & 2);
 
     // Setup CORB
-    uint64_t corb_phys = (uint64_t)s_corb;
+    uint64_t corb_phys = kvirt_to_phys(s_corb);
     RegWrite32(HDA_REG_CORBLBASE, (uint32_t)corb_phys);
     RegWrite32(HDA_REG_CORBUBASE, (uint32_t)(corb_phys >> 32));
     RegWrite8(HDA_REG_CORBSIZE, 0x02); // 256 entries
     RegWrite16(HDA_REG_CORBWP, 0);
     
     // Setup RIRB
-    uint64_t rirb_phys = (uint64_t)s_rirb;
+    uint64_t rirb_phys = kvirt_to_phys(s_rirb);
     RegWrite32(HDA_REG_RIRBLBASE, (uint32_t)rirb_phys);
     RegWrite32(HDA_REG_RIRBUBASE, (uint32_t)(rirb_phys >> 32));
     RegWrite8(HDA_REG_RIRBSIZE, 0x02); // 256 entries
@@ -119,7 +121,7 @@ void IntelHDA::Initialize() {
     // However, QEMU usually defaults to TC0.
     
     // Setup DMA Position Buffer
-    uint64_t dma_pos_phys = (uint64_t)s_dma_pos;
+    uint64_t dma_pos_phys = kvirt_to_phys(s_dma_pos);
     RegWrite32(HDA_REG_DPLBASE, (uint32_t)(dma_pos_phys & 0xFFFFFF80) | 1); // Enable bit 0
     RegWrite32(HDA_REG_DPUBASE, (uint32_t)(dma_pos_phys >> 32));
 
@@ -137,7 +139,7 @@ void IntelHDA::PlayTestSound() {
     }
 
     // Setup BDL entries BEFORE touching HDA registers
-    uint64_t buf_phys = (uint64_t)s_audio_buffer;
+    uint64_t buf_phys = kvirt_to_phys(s_audio_buffer);
     s_bdl[0].address = buf_phys;
     s_bdl[0].length = 4096;
     s_bdl[0].flags = 0;
@@ -150,7 +152,7 @@ void IntelHDA::PlayTestSound() {
     __asm__ volatile("wbinvd");
     __asm__ volatile("mfence"); // Memory fence for ordering
 
-    uint64_t bdl_phys = (uint64_t)s_bdl;
+    uint64_t bdl_phys = kvirt_to_phys(s_bdl);
     kprintf("BDL Phys: 0x%lx, Buf Phys: 0x%lx\n", bdl_phys, buf_phys);
     
     uint32_t sd_offset = m_output_stream_offset;
@@ -227,7 +229,7 @@ void IntelHDA::StartStream(uint16_t format) {
     uint32_t sd_offset = m_output_stream_offset;
     
     // Setup BDL entries
-    uint64_t buf_phys = (uint64_t)s_audio_buffer;
+    uint64_t buf_phys = kvirt_to_phys(s_audio_buffer);
     s_bdl[0].address = buf_phys;
     s_bdl[0].length = 4096; // 2048 samples * 2 bytes
     s_bdl[0].flags = 1; // IOC - Interrupt on Completion
@@ -240,7 +242,7 @@ void IntelHDA::StartStream(uint16_t format) {
     __asm__ volatile("wbinvd");
     __asm__ volatile("mfence");
 
-    uint64_t bdl_phys = (uint64_t)s_bdl;
+    uint64_t bdl_phys = kvirt_to_phys(s_bdl);
 
     volatile uint8_t* ctl0 = (volatile uint8_t*)(m_base + sd_offset + 0);
     volatile uint8_t* ctl2 = (volatile uint8_t*)(m_base + sd_offset + 2);

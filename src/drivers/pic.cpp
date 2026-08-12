@@ -111,6 +111,9 @@ void init_pic() {
     // Remap the PIC to 32-47
     pic_remap(0x20, 0x28);
     
+    // Unmask PIT (IRQ 0)
+    pic_clear_mask(0);
+
     // Unmask Keyboard (IRQ 1)
     pic_clear_mask(1);
     

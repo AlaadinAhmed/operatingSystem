@@ -26,4 +26,4 @@ struct InterruptFrame {
   uint64_t ss;
 } __attribute__((packed));
 
-extern "C" void exception_handler_cpp(uint64_t vector, InterruptFrame *frame);
+extern "C" InterruptFrame *exception_handler_cpp(uint64_t vector, InterruptFrame *frame);

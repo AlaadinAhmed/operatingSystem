@@ -1,24 +1,43 @@
 #include "drivers/sse.h"
 
-// Clears a buffer using SSE unaligned stores.
+// Clears a buffer using fast hardware string instructions (ERMS)
 void sse_clear_buffer(void* buffer, uint32_t size_in_bytes) {
-    __m128i zero = _mm_setzero_si128();
-    __m128i* ptr = (__m128i*)buffer;
-    uint32_t count = size_in_bytes / 16;
-
-    for (uint32_t i = 0; i < count; ++i) {
-        _mm_storeu_si128(ptr + i, zero);
-    }
+    uint64_t qwords = size_in_bytes / 8;
+    uint64_t remainder = size_in_bytes % 8;
+    void* d = buffer;
+    asm volatile(
+        "rep stosq\n\t"
+        "mov %3, %%rcx\n\t"
+        "rep stosb"
+        : "+D"(d), "+c"(qwords)
+        : "a"(0ULL), "r"(remainder)
+        : "memory"
+    );
 }
 
-// Copies memory using SSE unaligned loads and stores.
+// Copies memory using fast hardware string instructions (ERMS)
 void sse_memcpy(void* dest, const void* src, uint32_t size_in_bytes) {
-    __m128i* d = (__m128i*)dest;
-    const __m128i* s = (const __m128i*)src;
-    uint32_t count = size_in_bytes / 16;
+    uint64_t qwords = size_in_bytes / 8;
+    uint64_t remainder = size_in_bytes % 8;
+    void* d = dest;
+    const void* s = src;
+    asm volatile(
+        "rep movsq\n\t"
+        "mov %3, %%rcx\n\t"
+        "rep movsb"
+        : "+D"(d), "+S"(s), "+c"(qwords)
+        : "r"(remainder)
+        : "memory"
+    );
+}
 
-    for (uint32_t i = 0; i < count; ++i) {
-        __m128i data = _mm_loadu_si128(s + i);
-        _mm_storeu_si128(d + i, data);
-    }
+// Fills a buffer with a 32-bit value using fast hardware string instructions (ERMS)
+void sse_fill_buffer32(void* buffer, uint32_t color, uint32_t count) {
+    void* d = buffer;
+    asm volatile(
+        "rep stosl"
+        : "+D"(d), "+c"(count)
+        : "a"(color)
+        : "memory"
+    );
 }

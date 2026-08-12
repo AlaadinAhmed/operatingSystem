@@ -66,6 +66,7 @@ public:
   class Text *m_versionLabel;
 
 private:
+  static bool s_driversInitialized;
   bool m_debugInfoVisible;
   class Text *m_debugLabels[10];
   uint32_t *framebuffer;
@@ -77,8 +78,17 @@ private:
   stbtt_fontinfo m_jetBrainsFontInfo;
   unsigned char *m_jetBrainsFontBuffer;
 
-  // Cursor state
+  // Cursor state (Hardware Target)
   int m_cursorX, m_cursorY;
+  
+  // Interpolated Render Cursor State
+  float m_render_mouseX, m_render_mouseY;
+  
+  // Dirty Rectangle Buffer for Cursor
+  uint32_t m_cursorBackground[CURSOR_WIDTH * CURSOR_HEIGHT];
+  int m_savedCursorX, m_savedCursorY;
+  bool m_hasSavedCursorBackground;
+
   bool m_cursorDrawn;
   bool m_prevLeftButton; // For click detection (edge trigger)
 
@@ -91,7 +101,7 @@ private:
   char m_currentPath[512];
   bool m_filesystemAvailable;
 
-  void Update();
+  void Update(float dt);
   void DrawText(int x, int y, const char *text, uint32_t color, float size,
                 stbtt_fontinfo *font);
   void Render();
@@ -105,6 +115,8 @@ private:
   void InitDrivers();
 
   void DrawCursor(int x, int y);
+  void RenderCursor();
+  void RestoreCursorBackground();
 
   DirectoryEntry *GetDirectoryListing(const char *path, int *count);
 

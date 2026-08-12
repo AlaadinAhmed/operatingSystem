@@ -43,8 +43,10 @@ void isr28();
 void isr29();
 void isr30();
 void isr31();
+void isr32();
 void isr33();
 void isr44();
+void isr255();
 }
 
 void init_idt() {
@@ -84,8 +86,10 @@ void init_idt() {
     set_idt_gate(29, (uint64_t)isr29);
     set_idt_gate(30, (uint64_t)isr30);
     set_idt_gate(31, (uint64_t)isr31);
+    set_idt_gate(32, (uint64_t)isr32); // PIT interrupt
     set_idt_gate(33, (uint64_t)isr33); // Keyboard interrupt
     set_idt_gate(44, (uint64_t)isr44); // Mouse interrupt
+    set_idt_gate(255, (uint64_t)isr255); // Spurious APIC interrupt
 
     // Load the IDT using lidt instruction
     asm volatile("lidt %0" : : "m"(idtr));

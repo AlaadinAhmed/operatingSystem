@@ -32,3 +32,4 @@ uint32_t get_buffer_size();    // Total buffer size in bytes
 bool is_initialized();
 
 } // namespace framebuffer
+namespace framebuffer { void update_to_hhdm(); }

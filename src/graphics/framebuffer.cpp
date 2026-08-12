@@ -5,6 +5,7 @@
 #include "graphics/surface.h"
 #include "memory/kmalloc.h"
 #include "print/print.h"
+#include "mem/vmm.h"
 #include <cstdint>
 
 namespace framebuffer {
@@ -20,7 +21,7 @@ void init_framebuffer(const int magic, const uint64_t addr) {
 
   if (magic == UEFI_MAGIC) {
     // UEFI boot - use boot info structure
-    s_front_surface.pixels = (uint32_t *)(uintptr_t)g_efi_boot_info.fb_addr;
+    s_front_surface.pixels = (uint32_t *)phys_to_kvirt(g_efi_boot_info.fb_addr);
     s_front_surface.width = g_efi_boot_info.width;
     s_front_surface.height = g_efi_boot_info.height;
     s_front_surface.pitch = g_efi_boot_info.pitch; // pitch in pixels
@@ -57,6 +58,12 @@ void init_framebuffer(const int magic, const uint64_t addr) {
 uint32_t *get_back_buffer() { return s_back_surface.pixels; }
 
 uint32_t *get_front_buffer() { return s_front_surface.pixels; }
+
+void update_to_hhdm() {
+    // Intentionally empty.
+    // s_front_surface.pixels is already mapped to the higher-half
+    // via phys_to_kvirt() during init_framebuffer().
+}
 
 void commit_framebuffer() {
   if (!s_initialized || s_back_surface.pixels == s_front_surface.pixels) {

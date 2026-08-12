@@ -4,6 +4,7 @@
 #include "drivers/bus/pci.h"
 #include "drivers/font.h"
 #include "memory/kmalloc.h"
+#include "mem/vmm.h"
 #include "print/print.h"
 
 static uint64_t g_hda_base = 0;
@@ -103,6 +104,8 @@ void find_audio_device() {
         kprintf("Bus Master & Memory Space Enabled.\n");
 
         g_hda_base = bar0 & 0xFFFFFFF0;
+        
+        g_hda_base = (uint64_t)vmm_map_mmio(g_hda_base, 0x10000, VMM_WRITE | VMM_PCD);
         
         static uint8_t driver_mem[sizeof(IntelHDA)];
         g_hda_driver = (IntelHDA*)driver_mem;

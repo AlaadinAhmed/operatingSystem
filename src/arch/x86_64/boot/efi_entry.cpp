@@ -227,13 +227,38 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *
     Print(L"BootInfo at 0x%lx\r\n", (uint64_t)boot_info);
 
     // ACPI Detection
+    boot_info->rsdp = NULL;
     ConfigTable = ST->ConfigurationTable;
     for (UINTN i = 0; i < ST->NumberOfTableEntries; i++) {
-        if (CompareGuid(&ConfigTable[i].VendorGuid, &Acpi20Guid)) {
-            boot_info->rsdp = ConfigTable[i].VendorTable;
-            Print(L"RSDP found at 0x%lx\r\n", (uint64_t)boot_info->rsdp);
-            break;
+        // gnu-efi's CompareGuid returns 0 when GUIDs match (like memcmp)
+        if (CompareGuid(&ConfigTable[i].VendorGuid, &Acpi20Guid) == 0) {
+            // Validate RSDP signature before accepting
+            char *sig = (char *)ConfigTable[i].VendorTable;
+            if (sig[0] == 'R' && sig[1] == 'S' && sig[2] == 'D' && sig[3] == ' ' &&
+                sig[4] == 'P' && sig[5] == 'T' && sig[6] == 'R' && sig[7] == ' ') {
+                boot_info->rsdp = ConfigTable[i].VendorTable;
+                Print(L"ACPI 2.0 RSDP found at 0x%lx\r\n", (uint64_t)boot_info->rsdp);
+                break;
+            }
         }
+    }
+    if (boot_info->rsdp == NULL) {
+        // Fallback: try ACPI 1.0 GUID
+        EFI_GUID Acpi10Guid = ACPI_TABLE_GUID;
+        for (UINTN i = 0; i < ST->NumberOfTableEntries; i++) {
+            if (CompareGuid(&ConfigTable[i].VendorGuid, &Acpi10Guid) == 0) {
+                char *sig = (char *)ConfigTable[i].VendorTable;
+                if (sig[0] == 'R' && sig[1] == 'S' && sig[2] == 'D' && sig[3] == ' ' &&
+                    sig[4] == 'P' && sig[5] == 'T' && sig[6] == 'R' && sig[7] == ' ') {
+                    boot_info->rsdp = ConfigTable[i].VendorTable;
+                    Print(L"ACPI 1.0 RSDP found at 0x%lx\r\n", (uint64_t)boot_info->rsdp);
+                    break;
+                }
+            }
+        }
+    }
+    if (boot_info->rsdp == NULL) {
+        Print(L"WARNING: No valid ACPI RSDP found!\r\n");
     }
 
     // --- Paging Configuration Setup ---
@@ -306,6 +331,10 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *
 
         pml4_ptr[0] = ((uint64_t)pdpt) | PAGE_PRESENT | PAGE_WRITE;
         pml4_ptr[PML4_INDEX(kernel_virtual_base)] = ((uint64_t)pdpt) | PAGE_PRESENT | PAGE_WRITE;
+        
+        // Map the Higher-Half Direct Map (HHDM)
+        uint64_t hhdm_virtual_base = 0xFFFF800000000000ULL;
+        pml4_ptr[PML4_INDEX(hhdm_virtual_base)] = ((uint64_t)pdpt) | PAGE_PRESENT | PAGE_WRITE;
 
         // Assign to our outer function scope variable
         pml4 = pml4_ptr;

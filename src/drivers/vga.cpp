@@ -1,6 +1,7 @@
 #include "common/boot_info.h"
 #include "drivers/font_data.h"
 #include "drivers/vga.h"
+#include "drivers/sse.h"
 #include "print/print.h"
 #include <cstdint>
 #include <cstring>
@@ -8,15 +9,17 @@
 // VBE Mode Info Block is at 0x5200
 #define VBE_MODE_INFO 0x5200
 
+#include "mem/vmm.h"
+
 // Public function to get the hardware framebuffer address
 // Supports both legacy VBE (32-bit) and EFI (64-bit) framebuffer addresses
 uint32_t *vga_get_framebuffer() {
     // Check if EFI framebuffer is set (non-zero)
     if (g_efi_boot_info.fb_addr != 0) {
-        return (uint32_t *)(uintptr_t)g_efi_boot_info.fb_addr;
+        return (uint32_t *)phys_to_kvirt(g_efi_boot_info.fb_addr);
     }
     // Fall back to legacy VBE mode info
-    return *(uint32_t **)(VBE_MODE_INFO + 40);
+    return (uint32_t *)phys_to_kvirt(*(uint32_t *)(VBE_MODE_INFO + 40));
 }
 
 static uint16_t get_pitch() {
@@ -92,13 +95,11 @@ void vga_draw_pixel(uint32_t *buffer, int x, int y, uint32_t color) {
 }
 
 void vga_clear_buffer(uint32_t *buffer, uint32_t color) {
-    uint16_t width = get_width();
     uint16_t height = get_height();
-    uint16_t pitch = get_pitch();
-    uint32_t totalpixels = width * height;
-    uint32_t bulkcount = (totalpixels * sizeof(uint32_t)) / 8;
-    uint64_t *ptr64 = (uint64_t *)buffer;
-    memset(ptr64, color, totalpixels / 2);
+    uint32_t pitch_pixels = get_pitch() / 4;
+    uint32_t totalpixels = pitch_pixels * height;
+    
+    sse_fill_buffer32(buffer, color, totalpixels);
 }
 
 void fast_clear_buffer(uint32_t *buffer) { vga_clear_buffer(buffer, 0x000000); }

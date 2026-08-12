@@ -1,8 +1,10 @@
+#include <mem/heap.h>
 #include "common/boot_info.h"
 #include "drivers/audio/audio.h"
 #include "drivers/bus/usb.h"
 #include "drivers/mouse/mouse.h"
 #include "drivers/nvme/nvme.h"
+#include "drivers/sse.h"
 #include "drivers/vga.h"
 #include "fs/lwext4_adapter.h"
 #include "memory/kmalloc.h"
@@ -10,6 +12,7 @@
 #include "stb_truetype.h"
 #include "system/system.h"
 #include "timer/timer.h"
+#include "timer/pit.h"
 #include "ui/widgets/text.h"
 #include <ext4.h>
 
@@ -38,7 +41,9 @@ static void onTestButtonClick() {
 // ...
 
 System::System()
-    : m_robotoFontBuffer(nullptr), m_bbhbogleFontBuffer(nullptr), m_cursorX(-1), m_cursorY(-1), m_cursorDrawn(false),
+    : m_robotoFontBuffer(nullptr), m_bbhbogleFontBuffer(nullptr), m_cursorX(100), m_cursorY(100), 
+      m_render_mouseX(100.0f), m_render_mouseY(100.0f), m_savedCursorX(0), m_savedCursorY(0),
+      m_hasSavedCursorBackground(false), m_cursorDrawn(false),
       m_prevLeftButton(false), m_clickableRegionCount(0), m_currentEntryCount(0), m_filesystemAvailable(false),
       m_testButton(nullptr), m_compositor(new Compositor()), m_debugInfoVisible(false), m_backbuffer(nullptr) {
     s_instance = this;
@@ -53,7 +58,15 @@ System::System()
 
 bool System::InitFilesystem() { return fs::mount_filesystem("/mp/"); }
 
+bool System::s_driversInitialized = false;
+
 void System::InitDrivers() {
+    if (s_driversInitialized) {
+        kprintf("System: Drivers already initialized, skipping.\n");
+        return;
+    }
+    s_driversInitialized = true;
+
     mouse_init(1.0f);
     find_audio_device();
     find_nvme_devices();
@@ -72,7 +85,7 @@ void System::Initialize() {
         kprintf("System: Failed to allocate backbuffer!\n");
         // Fallback?
     } else {
-        kprintf("System: Backbuffer allocated at %p\n", m_backbuffer);
+        kprintf("System: Backbuffer allocated at 0x%lx\n", m_backbuffer);
         memset(m_backbuffer, 0, g_efi_boot_info.width * g_efi_boot_info.height * 4);
     }
 
@@ -99,35 +112,42 @@ void System::Initialize() {
     m_testButton = new Button(100, 30, 600, 100, "Click Me", 0x000000FF, 0xFFFDF0D5, 4, &m_robotoFontInfo,
                               onTestButtonClick, 10, 0xFFFDF0);
     m_compositor->addWindow(m_testButton);
+    kprintf("System: Button initialized\n");
 
     // Initialize version label
     m_versionLabel = new Text(0, 400, "MyOS v0.1", 0xFFFFFFFF, 32.0f, &m_robotoFontInfo, 1024);
+    kprintf("System: Text initialized\n");
     m_versionLabel->setAlignment(Alignment::Center);
     m_versionLabel->setAlpha(200);
     m_compositor->addWindow(m_versionLabel);
+    kprintf("System: Text added to compositor\n");
 
     // Play startup sound
     kprintf("System: Playing startup sound...\n");
     // start_audio_file("as_it_was.wav");
 
     find_xhci();
+    
     kprintf("System: Ready\n");
 }
 
 void System::Shutdown() { kprintf("System: Shutdown\n"); }
 
 void System::Run() {
+    uint64_t last_ticks = pit_get_ticks();
+    const uint64_t ticks_per_frame = 16; // ~60 FPS
+
+    Render(); // Initial render
+
     while (true) {
         ProcessInput();
         HandleEvents();
-        Update();
 
         MouseState mouse = mouse_update();
 
-        bool cursorMoved = (mouse.x != m_cursorX || mouse.y != m_cursorY);
         bool buttonChanged = (mouse.buttons[0] != m_prevLeftButton);
 
-        // Always update cursor state
+        // Update hardware target
         m_cursorX = mouse.x;
         m_cursorY = mouse.y;
 
@@ -150,12 +170,18 @@ void System::Run() {
         }
         m_prevLeftButton = leftButton;
 
-        // Render frame (Double Buffered)
-        // Only redraw if something changed to save CPU, but for now redraw every
-        // frame to fix artifacts Actually, if we redraw every frame, we solve all
-        // "erase" issues. To save CPU, we can check flags.
-        if (cursorMoved || buttonChanged || m_debugInfoVisible) {
-            Render();
+        uint64_t current_ticks = pit_get_ticks();
+        if (current_ticks - last_ticks >= ticks_per_frame) {
+            float dt = (current_ticks - last_ticks) / 1000.0f;
+            last_ticks = current_ticks;
+
+            Update(dt);
+
+            if (buttonChanged || m_debugInfoVisible) {
+                Render();
+            } else {
+                RenderCursor();
+            }
         }
 
         asm volatile("hlt");
@@ -169,23 +195,24 @@ void System::DrawRectangle(int x, int y, int width, int height, uint32_t color) 
     uint32_t *target = m_backbuffer ? m_backbuffer : framebuffer;
     int pitch = g_efi_boot_info.width; // Pixels
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int px = x + j;
-            int py = y + i;
-            if (px >= 0 && px < g_efi_boot_info.width && py >= 0 && py < g_efi_boot_info.height) {
-                target[py * pitch + px] = color;
-            }
-        }
+    // Clip to screen
+    int start_y = y < 0 ? 0 : y;
+    int end_y = y + height > g_efi_boot_info.height ? g_efi_boot_info.height : y + height;
+    int start_x = x < 0 ? 0 : x;
+    int end_x = x + width > g_efi_boot_info.width ? g_efi_boot_info.width : x + width;
+    
+    int clipped_width = end_x - start_x;
+    if (clipped_width <= 0) return;
+
+    for (int i = start_y; i < end_y; i++) {
+        sse_fill_buffer32(&target[i * pitch + start_x], color, clipped_width);
     }
 }
 
 void System::ClearScreen(uint32_t color) {
     // Clear backbuffer
     if (m_backbuffer) {
-        for (int i = 0; i < g_efi_boot_info.width * g_efi_boot_info.height; i++) {
-            m_backbuffer[i] = color;
-        }
+        sse_fill_buffer32(m_backbuffer, color, g_efi_boot_info.width * g_efi_boot_info.height);
     } else {
         vga_clear_buffer(framebuffer, color);
     }
@@ -229,12 +256,12 @@ void System::LoadImage(const char *filename, int x, int y, int &out_width, int &
         kprintf("LoadImage: Failed to read file\n");
         return;
     }
-    kprintf("LoadImage: Read %d bytes, buffer at %p\n", (int)file_size, file_buffer);
+    kprintf("LoadImage: Read %d bytes, buffer at 0x%lx\n", (int)file_size, file_buffer);
 
     kprintf("LoadImage: Calling stbi_load_from_memory...\n");
     unsigned char *image_data =
         stbi_load_from_memory(file_buffer, (int)file_size, &out_width_local, &out_height_local, &channels_in_file, 4);
-    kprintf("LoadImage: stbi returned %p\n", image_data);
+    kprintf("LoadImage: stbi returned 0x%lx\n", image_data);
 
     kfree(file_buffer);
 
@@ -281,8 +308,7 @@ void System::Render() {
     // Fast fill with dark blue
     uint32_t bgColor = 0x003049;
     int count = g_efi_boot_info.width * g_efi_boot_info.height;
-    for (int i = 0; i < count; i++)
-        m_backbuffer[i] = bgColor;
+    sse_fill_buffer32(m_backbuffer, bgColor, count);
 
     // 2. Render UI to Backbuffer
     Surface screen;
@@ -339,22 +365,18 @@ void System::Render() {
         }
     }
 
-    // 4. Draw Cursor to Backbuffer
-    DrawCursor(m_cursorX, m_cursorY);
+    // 4. Draw Cursor on top using Dirty Rectangles before flipping
+    m_hasSavedCursorBackground = false; // Reset since we just created a clean frame
+    RenderCursor();
 
     // 5. Flip (Copy Backbuffer to Framebuffer)
-    // Framebuffer pitch might be different (padding)
     uint32_t fb_pitch_pixels = g_efi_boot_info.pitch;
-    // Note: pitch in BootInfo is usually pixels, but sometimes bytes.
-    // In our case, we treat it as pixels in other places.
 
     if (fb_pitch_pixels == g_efi_boot_info.width) {
-        // Fast path: Single copy
-        memcpy(framebuffer, m_backbuffer, g_efi_boot_info.width * g_efi_boot_info.height * 4);
+        sse_memcpy(framebuffer, m_backbuffer, g_efi_boot_info.width * g_efi_boot_info.height * 4);
     } else {
-        // Slow path: Line by line
         for (int y = 0; y < g_efi_boot_info.height; y++) {
-            memcpy(framebuffer + y * fb_pitch_pixels, m_backbuffer + y * g_efi_boot_info.width,
+            sse_memcpy(framebuffer + y * fb_pitch_pixels, m_backbuffer + y * g_efi_boot_info.width,
                    g_efi_boot_info.width * 4);
         }
     }
@@ -372,24 +394,62 @@ static const uint8_t s_cursorBitmap[19][12] = {
     {0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0},
 };
 
-void System::DrawCursor(int x, int y) {
-    if (!m_backbuffer)
-        return;
+void System::RestoreCursorBackground() {
+    if (!m_hasSavedCursorBackground || !framebuffer) return;
+    
+    int width = g_efi_boot_info.width;
+    for (int i = 0; i < CURSOR_HEIGHT; i++) {
+        for (int j = 0; j < CURSOR_WIDTH; j++) {
+            int px = m_savedCursorX + j;
+            int py = m_savedCursorY + i;
+            if (px >= 0 && px < g_efi_boot_info.width && py >= 0 && py < g_efi_boot_info.height) {
+                framebuffer[py * width + px] = m_cursorBackground[i * CURSOR_WIDTH + j];
+                m_backbuffer[py * width + px] = m_cursorBackground[i * CURSOR_WIDTH + j];
+            }
+        }
+    }
+    m_hasSavedCursorBackground = false;
+}
 
+void System::RenderCursor() {
+    if (!m_backbuffer || !framebuffer) return;
+
+    RestoreCursorBackground();
+
+    int cx = (int)m_render_mouseX;
+    int cy = (int)m_render_mouseY;
+
+    m_savedCursorX = cx;
+    m_savedCursorY = cy;
     int width = g_efi_boot_info.width;
     int height = g_efi_boot_info.height;
+    
+    for (int i = 0; i < CURSOR_HEIGHT; i++) {
+        for (int j = 0; j < CURSOR_WIDTH; j++) {
+            int px = cx + j;
+            int py = cy + i;
+            if (px >= 0 && px < g_efi_boot_info.width && py >= 0 && py < g_efi_boot_info.height) {
+                m_cursorBackground[i * CURSOR_WIDTH + j] = m_backbuffer[py * width + px];
+            } else {
+                m_cursorBackground[i * CURSOR_WIDTH + j] = 0;
+            }
+        }
+    }
+    m_hasSavedCursorBackground = true;
 
     for (int i = 0; i < CURSOR_HEIGHT; i++) {
         for (int j = 0; j < CURSOR_WIDTH; j++) {
             uint8_t pixel = s_cursorBitmap[i][j];
-            int px = x + j;
-            int py = y + i;
+            int px = cx + j;
+            int py = cy + i;
 
             if (px >= 0 && px < width && py >= 0 && py < height) {
                 if (pixel == 1) {
-                    m_backbuffer[py * width + px] = 0x000000; // Black outline
+                    framebuffer[py * width + px] = 0x000000;
+                    m_backbuffer[py * width + px] = 0x000000;
                 } else if (pixel == 2) {
-                    m_backbuffer[py * width + px] = 0xFFFFFF; // White fill
+                    framebuffer[py * width + px] = 0xFFFFFF;
+                    m_backbuffer[py * width + px] = 0xFFFFFF;
                 }
             }
         }
@@ -610,4 +670,17 @@ void System::UpdateDebugInfo() {
         m_debugLabels[4]->setText(buffer);
 }
 
-void System::Update() { UpdateDebugInfo(); }
+void System::Update(float dt) { 
+    // Smooth Cursor LERP
+    float dx = m_cursorX - m_render_mouseX;
+    float dy = m_cursorY - m_render_mouseY;
+    
+    // Increased factor so it's snappy and doesn't slide on ice
+    float lerp_factor = 40.0f * dt;
+    if (lerp_factor > 1.0f) lerp_factor = 1.0f;
+    
+    m_render_mouseX += dx * lerp_factor;
+    m_render_mouseY += dy * lerp_factor;
+
+    UpdateDebugInfo(); 
+}

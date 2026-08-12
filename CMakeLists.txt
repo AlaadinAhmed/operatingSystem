@@ -45,7 +45,7 @@ target_compile_definitions(lwext4_lib PUBLIC CONFIG_USE_USER_MALLOC=1 CONFIG_USE
 target_include_directories(lwext4_lib PUBLIC src/external/lwext4/include)
 
 # Drivers Library
-add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp src/drivers/audio/audio_player.cpp src/drivers/pic.cpp src/drivers/bus/usb.cpp src/drivers/nvme/nvme.cpp)
+add_library(drivers_lib STATIC src/drivers/vga.cpp src/drivers/font.cpp src/drivers/sse.cpp src/drivers/keyboard.cpp src/drivers/mouse/mouse.cpp src/drivers/bus/pci.cpp src/drivers/audio/audio.cpp src/drivers/audio/intel_hda.cpp src/drivers/audio/ac97.cpp src/drivers/audio/audio_player.cpp src/drivers/pic.cpp src/drivers/bus/usb.cpp src/drivers/nvme/nvme.cpp src/drivers/ioapic.cpp)
 target_include_directories(drivers_lib PUBLIC include/drivers src/external src)
 
 # FS Library
@@ -69,15 +69,15 @@ add_library(disk_lib STATIC src/disk/disk.cpp src/disk/nvme_disk.cpp)
 target_include_directories(disk_lib PUBLIC include/disk)
 
 # Kernel Library
-add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/graphics/font_renderer.cpp src/graphics/compositor.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm src/kernel/ext4_print_adapter.cpp)
-target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include src include/print)
+add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/graphics/font_renderer.cpp src/graphics/compositor.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm src/kernel/ext4_print_adapter.cpp src/arch/x86_64/cpu/cpuid.cpp src/proc/process.cpp src/proc/scheduler.cpp src/kernel/sync/spinlock.cpp src/acpi/acpi.cpp)
+target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include src include/print include/arch/x86_64/ include/proc/ include/)
 
 #Memory
-add_library(memory_lib STATIC src/mem/pmm.cpp src/mem/vmm.cpp)
+add_library(memory_lib STATIC src/mem/pmm.cpp src/mem/vmm.cpp src/mem/heap.cpp)
 target_include_directories(memory_lib PUBLIC include/mem)
 
 #Timer
-add_library(timer_lib STATIC src/timer/timer.cpp)
+add_library(timer_lib STATIC src/timer/timer.cpp src/timer/pit.cpp)
 target_include_directories(timer_lib PUBLIC include/timer)
 
 
@@ -330,6 +330,8 @@ add_custom_target(run-uefi
 # Run with pure UEFI + Virtual NVMe PCIe Device
 add_custom_target(run-nvme
     COMMAND qemu-system-x86_64
+        # -enable-kvm
+        -cpu qemu64,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2 
         -bios /usr/share/edk2/x64/OVMF.4m.fd
         # 1. Your standard boot image (Keep as IDE or change to USB/NVMe depending on where your EFI lives)
         -drive format=raw,file=${EFI_BUILD_DIR}/uefi.img,index=0,media=disk,if=ide
@@ -338,7 +340,8 @@ add_custom_target(run-nvme
         -drive format=raw,file=${CMAKE_SOURCE_DIR}/build/rootfs.img,if=none,id=nvme_disk0
         
         # 3. Create the physical PCIe NVMe Controller and plug the backend drive into it
-        -device nvme,serial=NVME_TEST_BOOT_0,drive=nvme_disk0,id=nvme_ctrl0
+        -device nvme,serial=NVME_TEST_BOOT_0,id=nvme_ctrl0
+        -device nvme-ns,drive=nvme_disk0,bus=nvme_ctrl0,nsid=1
         
         # 4. System allocation resources
         -m 512 
@@ -373,12 +376,12 @@ add_custom_target(vmware-config
     COMMENT "Creating VMware configuration files"
 )
 
-# Run in VMware Player (with XKEYBOARD fix for Linux)
+# Run in VMware (with XKEYBOARD fix for Linux)
 add_custom_target(run-vmware
     COMMAND setxkbmap -option ""
-    COMMAND vmplayer ${CMAKE_BINARY_DIR}/myos.vmx
+    COMMAND vmware -x ${CMAKE_BINARY_DIR}/myos.vmx
     DEPENDS vmware-config
-    COMMENT "Running MyOS in VMware Player (Intel HD Audio)"
+    COMMENT "Running MyOS in VMware Workstation (Intel HD Audio)"
 )
 
 # =============================================================================

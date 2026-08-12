@@ -37,6 +37,7 @@ common_isr_handler:
   mov rsi, rsp              ; Argument 2: Pointer to InterruptFrame (current stack pointer)
 
   call exception_handler_cpp
+  mov rsp, rax              ; Update RSP to the returned pointer (which may switch tasks)
 
   ; Restore CPU state
   pop r15
@@ -95,4 +96,5 @@ ISR_NOERRCODE 32
 ISR_NOERRCODE 33
 ISR_NOERRCODE 34
 ISR_NOERRCODE 44
+ISR_NOERRCODE 255
 

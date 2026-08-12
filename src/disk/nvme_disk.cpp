@@ -3,6 +3,7 @@
 #include "drivers/bus/pci.h"
 #include "disk/disk.h"
 #include "memory/kmalloc.h"
+#include "mem/vmm.h"
 #include "print/print.h"
 
 namespace fs {
@@ -150,7 +151,7 @@ bool NvmeDisk::submit_io_read(uint64_t slba, uint16_t nlb, void* buffer) {
     cmd.opcode = kNvmeIoRead;
     cmd.cid = m_next_cid++;
     cmd.nsid = m_namespace_id;
-    cmd.prp1 = (uint64_t)buffer;
+    cmd.prp1 = kvirt_to_phys(buffer);
     cmd.cdw10 = (uint32_t)(slba & 0xFFFFFFFFu);
     cmd.cdw11 = (uint32_t)(slba >> 32);
     cmd.cdw12 = nlb;
@@ -204,7 +205,7 @@ bool NvmeDisk::submit_io_write(uint64_t slba, uint16_t nlb, const void* buffer) 
     cmd.opcode = kNvmeIoWrite;
     cmd.cid = m_next_cid++;
     cmd.nsid = m_namespace_id;
-    cmd.prp1 = (uint64_t)buffer;
+    cmd.prp1 = kvirt_to_phys(buffer);
     cmd.cdw10 = (uint32_t)(slba & 0xFFFFFFFFu);
     cmd.cdw11 = (uint32_t)(slba >> 32);
     cmd.cdw12 = nlb;
@@ -272,7 +273,7 @@ bool NvmeDisk::identify_controller() {
     cmd.opcode = kNvmeAdminIdentify;
     cmd.cid = m_next_cid++;
     cmd.nsid = 0;
-    cmd.prp1 = (uint64_t)g_admin_data;
+    cmd.prp1 = kvirt_to_phys(g_admin_data);
     cmd.cdw10 = 1; // CNS = Identify Controller
     return submit_admin_command(cmd, g_admin_data, sizeof(g_admin_data));
 }
@@ -282,7 +283,7 @@ bool NvmeDisk::identify_namespace() {
     cmd.opcode = kNvmeAdminIdentify;
     cmd.cid = m_next_cid++;
     cmd.nsid = m_namespace_id;
-    cmd.prp1 = (uint64_t)g_admin_data;
+    cmd.prp1 = kvirt_to_phys(g_admin_data);
     cmd.cdw10 = 0; // CNS = Identify Namespace
     return submit_admin_command(cmd, g_admin_data, sizeof(g_admin_data));
 }
@@ -291,7 +292,7 @@ bool NvmeDisk::create_io_queues() {
     NvmeCommand cq_cmd = {};
     cq_cmd.opcode = kNvmeAdminCreateIoCompletionQueue;
     cq_cmd.cid = m_next_cid++;
-    cq_cmd.prp1 = (uint64_t)g_io_cq;
+    cq_cmd.prp1 = kvirt_to_phys(g_io_cq);
     cq_cmd.cdw10 = ((uint32_t)(m_queue_depth - 1) << 16) | 1u;
     cq_cmd.cdw11 = 1u; // physically contiguous
     if (!submit_admin_command(cq_cmd, nullptr, 0)) {
@@ -301,7 +302,7 @@ bool NvmeDisk::create_io_queues() {
     NvmeCommand sq_cmd = {};
     sq_cmd.opcode = kNvmeAdminCreateIoSubmissionQueue;
     sq_cmd.cid = m_next_cid++;
-    sq_cmd.prp1 = (uint64_t)g_io_sq;
+    sq_cmd.prp1 = kvirt_to_phys(g_io_sq);
     sq_cmd.cdw10 = ((uint32_t)(m_queue_depth - 1) << 16) | 1u;
     sq_cmd.cdw11 = 1u | (1u << 16); // physically contiguous + CQID 1
     return submit_admin_command(sq_cmd, nullptr, 0);
@@ -335,6 +336,8 @@ bool NvmeDisk::Initialize(uint8_t bus, uint8_t device, uint8_t function) {
 
     kprintf("NVMe: MMIO base 0x%lx\n", m_mmio_base);
 
+    m_mmio_base = (uint64_t)vmm_map_mmio(m_mmio_base, 0x10000, VMM_WRITE | VMM_PCD);
+
     uint64_t cap = read64(0x00);
     m_cap_mqes = cap & 0xFFFFu;
     m_dstrd = (cap >> 32) & 0xFu;
@@ -356,8 +359,8 @@ bool NvmeDisk::Initialize(uint8_t bus, uint8_t device, uint8_t function) {
 
     kprintf("NVMe: programming admin queues\n");
     write32(0x24, ((m_queue_depth - 1u) << 16) | (m_queue_depth - 1u));
-    write64(0x28, (uint64_t)g_admin_sq);
-    write64(0x30, (uint64_t)g_admin_cq);
+    write64(0x28, kvirt_to_phys(g_admin_sq));
+    write64(0x30, kvirt_to_phys(g_admin_cq));
 
     uint32_t cc = 0;
     cc |= 1u; // EN
@@ -377,9 +380,8 @@ bool NvmeDisk::Initialize(uint8_t bus, uint8_t device, uint8_t function) {
         return false;
     }
 
-    uint32_t nn = *(uint32_t*)(g_admin_data + 0x4C);
+    uint32_t nn = *(uint32_t*)(g_admin_data + 0x204);
     if (nn == 0) {
-        kprintf("NVMe: controller reports zero namespaces\n");
         return false;
     }
 
@@ -390,7 +392,7 @@ bool NvmeDisk::Initialize(uint8_t bus, uint8_t device, uint8_t function) {
         return false;
     }
 
-    uint8_t flbas = g_admin_data[0x28];
+    uint8_t flbas = g_admin_data[0x1A];
     uint8_t format = flbas & 0x0F;
     uint32_t lbaf = *(uint32_t*)(g_admin_data + 0x80 + (format * 4u));
     uint8_t lbads = (lbaf >> 16) & 0xFFu;
