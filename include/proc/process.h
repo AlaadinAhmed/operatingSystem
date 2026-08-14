@@ -1,6 +1,8 @@
 #pragma once
+#include "fs/vfs.h"
 #include "mem/vmm.h"
 #include <cstdint>
+constexpr int MAX_OPEN_FILES = 32;
 enum class ProcessState { RUNNING, READY, BLOCKED, ZOMBIE };
 struct RegisterState {
     uint64_t r15;
@@ -33,9 +35,23 @@ struct ProcessControlBlock {
     void *program_counter;
     PageTable *pml4_physical;
     RegisterState *context;
-    int open_files[32];
+    FileDescriptor *filedescriptors[MAX_OPEN_FILES];
     uint64_t cpu_cycles_used;
     ProcessControlBlock *next;
+
+    ProcessControlBlock() {
+        pid = 0;
+        state = ProcessState::READY;
+        priority = 0;
+        program_counter = nullptr;
+        pml4_physical = nullptr;
+        context = nullptr;
+        cpu_cycles_used = 0;
+        next = nullptr;
+        for (int i = 0; i < MAX_OPEN_FILES; i++) {
+            filedescriptors[i] = nullptr;
+        }
+    }
 };
 ProcessControlBlock *create_process(void (*entry_point)());
 PageTable *create_process_pml4();

@@ -2,19 +2,11 @@
 #include "graphics/font_renderer.h"
 #include "memory/kmalloc.h"
 
-// Helper for string length
-static int strlen(const char *str) {
-  int len = 0;
-  while (str[len])
-    len++;
-  return len;
-}
-
 // Helper for string copy
 static char *strdup(const char *str) {
-  int len = strlen(str);
+  size_t len = strlen(str);
   char *new_str = (char *)kmalloc(len + 1);
-  for (int i = 0; i <= len; i++) {
+  for (size_t i = 0; i <= len; i++) {
     new_str[i] = str[i];
   }
   return new_str;

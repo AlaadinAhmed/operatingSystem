@@ -69,7 +69,7 @@ add_library(disk_lib STATIC src/disk/disk.cpp src/disk/nvme_disk.cpp)
 target_include_directories(disk_lib PUBLIC include/disk)
 
 # Kernel Library
-add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/graphics/font_renderer.cpp src/graphics/compositor.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm src/kernel/ext4_print_adapter.cpp src/arch/x86_64/cpu/cpuid.cpp src/proc/process.cpp src/proc/scheduler.cpp src/kernel/sync/spinlock.cpp src/acpi/acpi.cpp)
+add_library(kernel_lib STATIC src/kernel/main.cpp src/kernel/utils.cpp src/system/system.cpp src/graphics/framebuffer.cpp src/graphics/font_renderer.cpp src/graphics/compositor.cpp src/arch/x86_64/gdt.cpp src/arch/x86_64/idt.cpp src/arch/x86_64/interrupts.cpp src/arch/x86_64/interrupts.asm src/kernel/ext4_print_adapter.cpp src/arch/x86_64/cpu/cpuid.cpp src/proc/process.cpp src/proc/scheduler.cpp src/kernel/sync/spinlock.cpp src/acpi/acpi.cpp src/fs/vfs.cpp src/sys/syscalls.cpp src/arch/x86_64/syscall_handler.cpp src/arch/x86_64/syscall.asm)
 target_include_directories(kernel_lib PUBLIC include/system src/external src/external/lwext4/include src include/print include/arch/x86_64/ include/proc/ include/)
 
 #Memory

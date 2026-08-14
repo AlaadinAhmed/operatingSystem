@@ -1,4 +1,5 @@
 #include "fs/lwext4_adapter.h"
+#include "fs/vfs.h"
 #include "disk/disk.h"
 #include "disk/nvme_disk.h"
 #include "print/print.h"
@@ -176,5 +177,9 @@ bool fs::mount_filesystem(const char* mount_point) {
     }
 
     kprintf("FS: Mounted at %s\n", mount_point);
+    
+    // Initialize VFS
+    vfs_init();
+    
     return true;
 }

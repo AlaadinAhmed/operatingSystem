@@ -3,6 +3,7 @@
 
 #include <stddef.h> // For size_t
 #include <stdint.h> // For uint8_t, uint16_t, etc.
+#include "kernel/utils.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,18 +14,6 @@ void* krealloc(void* ptr, size_t size);
 void* kcalloc(size_t nmemb, size_t size);
 void kfree(void* ptr);
 void init_memory();
-int abs(int x);
-
-extern "C" {
-extern void* memcpy(void* dest, const void* src, size_t n) noexcept;
-extern void* memset(void* s, int c, size_t n) noexcept;
-extern void* memset16(void* s, uint16_t c, size_t count) noexcept;
-extern void* memset32(void* s, uint32_t c, size_t count) noexcept;
-extern void* memset64(void* s, uint64_t c, size_t count) noexcept;
-}
-
-// Helper function to read a file from lwext4 into memory
-unsigned char* read_file_to_memory(const char* mount_point, const char* filename, size_t* file_size);
 
 #ifdef __cplusplus
 }

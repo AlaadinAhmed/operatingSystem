@@ -3,6 +3,7 @@
 #include "print.h"
 #include "proc/process.h"
 #include "proc/scheduler.h"
+#include "sys/syscalls.h"
 ProcessControlBlock *ready_queue_head = nullptr;
 ProcessControlBlock *ready_queue_tail = nullptr;
 void *preemptive_prepare_stack(void *stack_alloc_page, void (*entry_point)()) {
@@ -41,8 +42,8 @@ void *preemptive_prepare_stack(void *stack_alloc_page, void (*entry_point)()) {
     // If you leave this 0, the process starts with interrupts disabled and locks up the CPU.
     frame->rflags = 0x202;
 
-    // The task's initial running RSP points back to its clean page boundary top
-    frame->rsp = page_top;
+    // The task's initial running RSP points back to its clean page boundary top (adjusted for ABI alignment)
+    frame->rsp = page_top - 8;
 
     // Return the lowest address of the struct to write into your PCB tracking block
     return (void *)frame_address;
@@ -87,8 +88,29 @@ void idle_process_entry() {
     }
 }
 void worker_thread_1() {
+    kprintf("Process 1: Testing Syscall / VFS File Descriptor implementation...\n");
+    
+    int fd = sys_open("/mp/Roboto-Regular.ttf", 0);
+    if (fd < 0) {
+        kprintf("Process 1: Error opening file via sys_open!\n");
+    } else {
+        kprintf("Process 1: Successfully opened file with fd = %d\n", fd);
+        
+        uint8_t buf[16];
+        int64_t bytes = sys_read(fd, buf, 16);
+        if (bytes < 0) {
+            kprintf("Process 1: Error reading file via sys_read!\n");
+        } else {
+            kprintf("Process 1: Read %d bytes from file. First 4 bytes (hex): %x %x %x %x\n",
+                    (int)bytes, buf[0], buf[1], buf[2], buf[3]);
+        }
+        
+        sys_close(fd);
+        kprintf("Process 1: Closed fd = %d\n", fd);
+    }
+
     while (true) {
-        kprintf("Hello from Process 1!\n");
+        asm volatile("hlt");
     }
 }
 

@@ -1,6 +1,6 @@
-#include "proc/scheduler.h"
 #include "arch/x86_64/interrupts.h"
 #include "mem/vmm.h"
+#include "proc/scheduler.h"
 
 ProcessControlBlock *g_idle_task = nullptr;
 ProcessControlBlock *current_task = nullptr;
