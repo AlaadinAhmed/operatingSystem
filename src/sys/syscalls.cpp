@@ -1,5 +1,7 @@
 #include "cpu/cpuid.h"
+#include "fs/pty.h"
 #include "fs/vfs.h"
+#include "process.h"
 #include "scheduler.h"
 #include "sys/syscalls.h"
 void init_syscall() {
@@ -96,4 +98,44 @@ extern "C" void sys_exit(int code) {
     while (true) {
         asm volatile("hlt");
     }
+}
+extern "C" int64_t sys_ioctl(int fd, uint64_t request, void *args) {
+    if (fd < 0 || fd >= MAX_OPEN_FILES)
+        return -1;
+    FileDescriptor *desc = current_task->filedescriptors[fd];
+    if (!desc || !desc->node)
+        return -1;
+    PtyPair *pty = static_cast<PtyPair *>(desc->node->device_data);
+    if (!pty || !pty->in_use)
+        return -1;
+    switch (request) {
+    case TIOCPTN: {
+        if (!args)
+            return -1;
+        *static_cast<int *>(args) = pty->id;
+        return 0;
+    }
+    case TIOCSPTLCK: {
+        if (!args)
+            return -1;
+        pty->locked = (*static_cast<int *>(args) != 0);
+        return 0;
+    }
+    default:
+        return -1;
+    }
+}
+extern "C" int64_t sys_dup2(int oldfd, int newfd) {
+    if (oldfd < 0 || oldfd >= MAX_OPEN_FILES || newfd < 0 || newfd >= MAX_OPEN_FILES)
+        return -1;
+    FileDescriptor *src = current_task->filedescriptors[oldfd];
+    if (current_task->filedescriptors[newfd] != nullptr) {
+        sys_close(newfd);
+    }
+    FileDescriptor *clone = new FileDescriptor();
+    clone->node = src->node;
+    clone->offset = src->offset;
+    clone->flags = src->flags;
+    current_task->filedescriptors[newfd] = clone;
+    return newfd;
 }

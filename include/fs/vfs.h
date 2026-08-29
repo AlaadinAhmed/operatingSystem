@@ -1,5 +1,11 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
+#define VFS_FILE 0x01
+#define VFS_DIRECTORY 0x02
+#define VFS_CHARDEVICE 0x04
+#define VFS_BLOCKDEVICE 0x08
+#define VFS_PIPE 0x10
 struct vfs_node;
 typedef int64_t (*vfs_read_fn)(struct vfs_node *node, uint64_t offset, std::size_t size, uint8_t *buffer);
 typedef int64_t (*vfs_write_fn)(struct vfs_node *node, uint64_t offset, std::size_t size, const uint8_t *buffer);
@@ -23,11 +29,10 @@ struct FileDescriptor {
     uint64_t offset;
     uint32_t flags;
 };
-#define VFS_FILE        0x01
-#define VFS_DIRECTORY   0x02
 
 extern vfs_node *g_vfs_root;
 void vfs_init();
 
 vfs_node *vfs_lookup(vfs_node *root, const char *path);
 vfs_node *vfs_open(const char *path, int flags);
+static void vfs_strncpy(char *dest, const char *src, size_t n);

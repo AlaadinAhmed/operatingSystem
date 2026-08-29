@@ -133,7 +133,12 @@ extern "C" void main(uint32_t magic, uint64_t addr) {
     acpi_init();
     ioapic_init();
 
-    // Initialize scheduler
+    // --- System Startup ---
+    // Initialize system, drivers (including NVMe MMIO mapping), and filesystem first
+    System system;
+    system.Initialize();
+
+    // Initialize scheduler after VMM and MMIO mappings are fully established
     scheduler_init();
 
     // Set up APIC Timer (frequency 1000 Hz / 1ms ticks)
@@ -145,12 +150,10 @@ extern "C" void main(uint32_t magic, uint64_t addr) {
     ioapic_set_entry(pit_gsi, 32, 0, 0, 0, 0, 1, 0); // 1 = mask
     kprintf("Kernel: PIT Masked in IOAPIC. APIC Timer is now driving the scheduler ticks.\n");
 
-    // Inside kernel_main...
+    // Create process 1 now that all kernel page mappings (like NVMe MMIO) are in place to clone
     ProcessControlBlock *p1 = create_process(worker_thread_1);
     queue_ready_process(p1);
-    // --- System Startup ---
-    System system;
-    system.Initialize();
+
     asm volatile("sti");
     system.Run();
     system.Shutdown();
