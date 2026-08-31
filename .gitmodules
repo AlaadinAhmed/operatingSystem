@@ -1,6 +1,6 @@
 [submodule "src/external/lwext4"]
 	path = src/external/lwext4
-	url = https://github.com/gkostka/lwext4.git
+	url = https://github.com/AlaadinAhmed/lwext4.git
 
 [submodule "src/external/dr_libs"]
 	path = src/external/dr_libs
