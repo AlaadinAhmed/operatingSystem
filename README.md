@@ -31,7 +31,9 @@ A custom 64-bit Operating System built from scratch, featuring UEFI boot support
 
 ### Clone Command
 
+```bash
 git clone --recurse-submodules https://github.com/AlaadinAhmed/operatingSystem
+```
 
 ### Build Commands
 
