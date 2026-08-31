@@ -45,3 +45,5 @@ static inline uint64_t kvirt_to_phys(const void *ptr) { return kvirt_to_phys((ui
 void init_vmm();
 void finalize_kernel_pml4();
 uint64_t virtual_to_physical(void *virtual_addr);
+void vmm_destroy_user_space(PageTable *old_pml4);
+

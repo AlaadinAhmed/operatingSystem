@@ -177,3 +177,50 @@ uint64_t virtual_to_physical(void *virtual_addr) {
 
     return physical_frame_address + page_offset;
 }
+
+void vmm_destroy_user_space(PageTable *old_pml4) {
+    if (!old_pml4) return;
+    
+    // Iterate over the lower half (user space), indices 0-255
+    for (int pml4_idx = 0; pml4_idx < 256; pml4_idx++) {
+        if (!(old_pml4->entries[pml4_idx] & VMM_PRESENT)) continue;
+        
+        uint64_t pdpt_phys = old_pml4->entries[pml4_idx] & PTE_FRAME_MASK;
+        PageTable *pdpt = (PageTable *)phys_to_kvirt(pdpt_phys);
+        
+        for (int pdpt_idx = 0; pdpt_idx < 512; pdpt_idx++) {
+            if (!(pdpt->entries[pdpt_idx] & VMM_PRESENT)) continue;
+            
+            if (pdpt->entries[pdpt_idx] & (1ULL << 7)) {
+                // 1GB huge page frame mapped directly here (unlikely in user space, but handled)
+                pmm_free_page((void *)(pdpt->entries[pdpt_idx] & PTE_FRAME_MASK));
+                continue;
+            }
+            
+            uint64_t pd_phys = pdpt->entries[pdpt_idx] & PTE_FRAME_MASK;
+            PageTable *pd = (PageTable *)phys_to_kvirt(pd_phys);
+            
+            for (int pd_idx = 0; pd_idx < 512; pd_idx++) {
+                if (!(pd->entries[pd_idx] & VMM_PRESENT)) continue;
+                
+                if (pd->entries[pd_idx] & (1ULL << 7)) {
+                    // 2MB large page frame
+                    pmm_free_page((void *)(pd->entries[pd_idx] & PTE_FRAME_MASK));
+                    continue;
+                }
+                
+                uint64_t pt_phys = pd->entries[pd_idx] & PTE_FRAME_MASK;
+                PageTable *pt = (PageTable *)phys_to_kvirt(pt_phys);
+                
+                for (int pt_idx = 0; pt_idx < 512; pt_idx++) {
+                    if (!(pt->entries[pt_idx] & VMM_PRESENT)) continue;
+                    pmm_free_page((void *)(pt->entries[pt_idx] & PTE_FRAME_MASK));
+                }
+                pmm_free_page((void *)pt_phys);
+            }
+            pmm_free_page((void *)pd_phys);
+        }
+        pmm_free_page((void *)pdpt_phys);
+        old_pml4->entries[pml4_idx] = 0;
+    }
+}

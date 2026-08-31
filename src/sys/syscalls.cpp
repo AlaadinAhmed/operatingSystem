@@ -1,9 +1,13 @@
 #include "cpu/cpuid.h"
+#include "elf.h"
 #include "fs/pty.h"
 #include "fs/vfs.h"
+#include "mem/pmm.h"
+#include "mem/vmm.h"
 #include "process.h"
 #include "scheduler.h"
 #include "sys/syscalls.h"
+#include <cstdint>
 void init_syscall() {
     uint64_t efer = read_msr(IA32_EFER_MSR);
     write_msr(IA32_EFER_MSR, efer | 0x1);
@@ -12,10 +16,11 @@ void init_syscall() {
     write_msr(IA32_LSTAR_MSR, (uint64_t)asm_syscall_entry);
     write_msr(IA32_FMASK_MSR, 0x200);
 }
-static inline int64_t user_syscall(uint64_t sys_num, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5) {
-    int64_t ret;
+static inline int64_t
+user_syscall(uint64_t sys_num, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5) {
+    int64_t           ret;
     register uint64_t r10_val asm("r10") = a4;
-    register uint64_t r8_val asm("r8") = a5;
+    register uint64_t r8_val asm("r8")   = a5;
 
     asm volatile("syscall"
                  : "=a"(ret)
@@ -38,10 +43,10 @@ int64_t sys_open(const char *path, int flags) {
     if (fd == -1) {
         return -1;
     }
-    FileDescriptor *desc = new FileDescriptor();
-    desc->node = node;
-    desc->offset = 0;
-    desc->flags = flags;
+    FileDescriptor *desc              = new FileDescriptor();
+    desc->node                        = node;
+    desc->offset                      = 0;
+    desc->flags                       = flags;
     current_task->filedescriptors[fd] = desc;
     return fd;
 }
@@ -132,10 +137,34 @@ extern "C" int64_t sys_dup2(int oldfd, int newfd) {
     if (current_task->filedescriptors[newfd] != nullptr) {
         sys_close(newfd);
     }
-    FileDescriptor *clone = new FileDescriptor();
-    clone->node = src->node;
-    clone->offset = src->offset;
-    clone->flags = src->flags;
+    FileDescriptor *clone                = new FileDescriptor();
+    clone->node                          = src->node;
+    clone->offset                        = src->offset;
+    clone->flags                         = src->flags;
     current_task->filedescriptors[newfd] = clone;
     return newfd;
+}
+extern "C" int64_t sys_execve(const char *path, char *const argv[], char *const envp[]) {
+    vfs_node *exec_node = vfs_open(path, 0);
+    if (!exec_node) {
+        return -1;
+    }
+    PageTable *new_plm4_phys = create_process_pml4();
+    uint64_t   entry_point   = 0;
+    if (!load_elf_binary(exec_node, (uint64_t *)new_plm4_phys, &entry_point)) {
+        return -1;
+    }
+    uint64_t user_stack_top;
+    void    *stack_frame = pmm_alloc_page();
+    vmm_map_page(new_plm4_phys, user_stack_top, (uint64_t)stack_frame,
+                 VMM_PRESENT | VMM_USER | VMM_WRITE);
+    PageTable *old_plm4         = current_task->pml4_physical;
+    current_task->pml4_physical = new_plm4_phys;
+    asm volatile("mov %0, %%cr3" ::"r"(new_plm4_phys) : "memory");
+    vmm_destroy_user_space(old_plm4);
+    current_task->context->rip    = entry_point;
+    current_task->context->rsp    = user_stack_top;
+    current_task->context->rflags = 0x202;
+
+    return 0;
 }

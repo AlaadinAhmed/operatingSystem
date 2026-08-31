@@ -104,6 +104,7 @@ enum P_TYPE {
     PT_LOPROC = 0x70000000,
     PT_HIPROC = 0x7fffffff
 };
+enum P_FLAGS { PF_X = 1, PF_W = 2, PF_R = 4, PF_MASKPROC = 0xf0000000 };
 struct Elf32_Phdr {
     uint32_t p_type;
     uint32_t p_offset;
@@ -114,5 +115,4 @@ struct Elf32_Phdr {
     uint32_t p_flags;
     uint32_t p_align;
 };
-bool load_elf_binary(vfs_node *file, uint64_t *new_plm4_phys,
-                     uint64_t *out_entry);
+bool load_elf_binary(vfs_node *file, uint64_t *new_plm4_phys, uint64_t *out_entry);

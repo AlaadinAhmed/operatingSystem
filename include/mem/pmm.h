@@ -37,4 +37,4 @@ extern PhysicalMemoryManager g_pmm;
 void init_pmm(struct BootInfo *bootinfo);
 void *pmm_alloc_page();
 inline void tlb_flush(uintptr_t virtual_address) { asm volatile("invlpg (%0)" ::"r"(virtual_address) : "memory"); }
-void pmm_free_page();
+void pmm_free_page(void *physical_addr);
