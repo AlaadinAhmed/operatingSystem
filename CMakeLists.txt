@@ -138,7 +138,7 @@ set(EFI_CFLAGS
     -I${GNU_EFI_DIR}/inc/x86_64
     -I${GNU_EFI_DIR}/inc/protocol
     -mno-red-zone 
-    -fshort-wchar           # <--- ENSURE THIS: Makes L"strings" 16-bit
+    -fshort-wchar 
     -fno-stack-protector 
     -ffreestanding 
     -fPIC 
@@ -148,20 +148,22 @@ set(EFI_CFLAGS
     -DGNU_EFI_USE_MS_ABI 
     -maccumulate-outgoing-args
 )
-# Build gnu-efi from source (if needed)
-add_custom_command(
-    OUTPUT ${GNU_EFI_DIR}/x86_64/gnuefi/crt0-efi-x86_64.o
-    COMMAND make ARCH=x86_64
-    WORKING_DIRECTORY ${GNU_EFI_DIR}
-    COMMENT "Building gnu-efi from source"
-)
-add_custom_target(gnuefi_lib DEPENDS ${GNU_EFI_DIR}/x86_64/gnuefi/crt0-efi-x86_64.o)
 
-# Compile EFI entry
+# Build gnu-efi from source
+add_custom_command(
+    OUTPUT ${EFI_BUILD_DIR}/gnu-efi-built.stamp
+    COMMAND make -C ${GNU_EFI_DIR} ARCH=x86_64
+    COMMAND cmake -E make_directory ${EFI_BUILD_DIR}
+    COMMAND cmake -E touch ${EFI_BUILD_DIR}/gnu-efi-built.stamp
+    COMMENT "Building gnu-efi library from source"
+)
+add_custom_target(gnuefi_lib DEPENDS ${EFI_BUILD_DIR}/gnu-efi-built.stamp)
+
+# Compile EFI entry (using g++ with C++ flags for .cpp files)
 add_custom_command(
     OUTPUT ${EFI_BUILD_DIR}/efi_entry.o
     COMMAND mkdir -p ${EFI_BUILD_DIR}
-    COMMAND gcc ${EFI_CFLAGS} -c ${EFI_ENTRY_SRC} -o ${EFI_BUILD_DIR}/efi_entry.o
+    COMMAND g++ ${EFI_CFLAGS} -fno-rtti -fno-exceptions -c ${EFI_ENTRY_SRC} -o ${EFI_BUILD_DIR}/efi_entry.o
     DEPENDS ${EFI_ENTRY_SRC} gnuefi_lib
     COMMENT "Compiling UEFI entry"
 )
@@ -170,7 +172,8 @@ add_custom_command(
 add_custom_command(
     OUTPUT ${EFI_BUILD_DIR}/kernel_bin.o
     COMMAND mkdir -p ${EFI_BUILD_DIR}
-    COMMAND cd ${CMAKE_BINARY_DIR} && objcopy -I binary -O elf64-x86-64 -B i386:x86-64 kernel.bin ${EFI_BUILD_DIR}/kernel_bin.o
+    COMMAND objcopy -I binary -O elf64-x86-64 -B i386:x86-64 kernel.bin ${EFI_BUILD_DIR}/kernel_bin.o
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     DEPENDS ${CMAKE_BINARY_DIR}/kernel.bin
     COMMENT "Embedding kernel binary into object file"
 )
@@ -181,20 +184,22 @@ add_custom_command(
     COMMAND ld -nostdlib --warn-common --no-undefined --fatal-warnings --build-id=sha1
         -znocombreloc -shared -Bsymbolic
         -L${GNU_EFI_DIR}/x86_64/lib -L${GNU_EFI_DIR}/x86_64/gnuefi
+        -L${GNU_EFI_DIR}/lib -L${GNU_EFI_DIR}/gnuefi
         ${GNU_EFI_DIR}/x86_64/gnuefi/crt0-efi-x86_64.o
         ${EFI_BUILD_DIR}/efi_entry.o
         ${EFI_BUILD_DIR}/kernel_bin.o
         -o ${EFI_BUILD_DIR}/myos.so
         -lefi -lgnuefi
         -T ${GNU_EFI_DIR}/gnuefi/elf_x86_64_efi.lds
-    DEPENDS ${EFI_BUILD_DIR}/efi_entry.o ${EFI_BUILD_DIR}/kernel_bin.o
+    DEPENDS ${EFI_BUILD_DIR}/efi_entry.o ${EFI_BUILD_DIR}/kernel_bin.o gnuefi_lib
     COMMENT "Linking UEFI application"
 )
 
 # Convert to PE format
 add_custom_command(
     OUTPUT ${EFI_BUILD_DIR}/myos.efi
-    COMMAND objcopy -I elf64-x86-64 -j .text -j .sdata -j .data -j .dynamic -j .rodata -j .rel
+    COMMAND objcopy -I elf64-x86-64
+        -j .text -j .sdata -j .data -j .dynamic -j .rodata -j .rel
         -j .rela -j .rel.* -j .rela.* -j .reloc
         -O efi-app-x86_64
         ${EFI_BUILD_DIR}/myos.so ${EFI_BUILD_DIR}/myos.efi
@@ -216,7 +221,6 @@ add_custom_command(
 )
 
 add_custom_target(kernel_efi DEPENDS ${EFI_BUILD_DIR}/uefi.img)
-
 # =============================================================================
 # GRUB ISO (supports both BIOS and UEFI boot via GRUB)
 # =============================================================================
