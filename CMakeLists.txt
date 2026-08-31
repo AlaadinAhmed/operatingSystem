@@ -152,7 +152,7 @@ set(EFI_CFLAGS
 # Build gnu-efi from source
 add_custom_command(
     OUTPUT ${EFI_BUILD_DIR}/gnu-efi-built.stamp
-    COMMAND make -C ${GNU_EFI_DIR} ARCH=x86_64
+    COMMAND make -C ${GNU_EFI_DIR} ARCH=x86_64 lib gnuefi
     COMMAND cmake -E make_directory ${EFI_BUILD_DIR}
     COMMAND cmake -E touch ${EFI_BUILD_DIR}/gnu-efi-built.stamp
     COMMENT "Building gnu-efi library from source"
